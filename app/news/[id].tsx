@@ -1,4 +1,4 @@
-// app/news/[id].tsx - Updated News Detail Page
+// app/news/[id].tsx - News Detail Page with Content-Only WebView
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { cryptoApi } from '../../services/cryptoApi';
 import { NewsItem as NewsItemType } from '../../types';
@@ -25,9 +26,13 @@ export default function NewsDetailScreen() {
   const [news, setNews] = useState<NewsItemType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [relatedNews, setRelatedNews] = useState<NewsItemType[]>([]);
+  const [showWebView, setShowWebView] = useState<boolean>(false);
+  const [webViewLoading, setWebViewLoading] = useState<boolean>(false);
+  const [savedArticles, setSavedArticles] = useState<string[]>([]);
 
   useEffect(() => {
     fetchNewsDetail();
+    loadSavedArticles();
   }, [id]);
 
   const fetchNewsDetail = async (): Promise<void> => {
@@ -57,6 +62,33 @@ export default function NewsDetailScreen() {
     }
   };
 
+  const loadSavedArticles = (): void => {
+    // In a real app, you'd load this from AsyncStorage or a database
+    // For now, we'll use in-memory storage
+    setSavedArticles([]);
+  };
+
+  const handleSaveArticle = (): void => {
+    if (!news) return;
+
+    const articleId = news.id.toString();
+    const isCurrentlySaved = savedArticles.includes(articleId);
+
+    if (isCurrentlySaved) {
+      // Remove from saved
+      setSavedArticles(prev => prev.filter(id => id !== articleId));
+      Alert.alert('Removed', 'Article removed from saved items');
+    } else {
+      // Add to saved
+      setSavedArticles(prev => [...prev, articleId]);
+      Alert.alert('Saved', 'Article saved successfully');
+    }
+  };
+
+  const isArticleSaved = (): boolean => {
+    return news ? savedArticles.includes(news.id.toString()) : false;
+  };
+
   const handleShare = async (): Promise<void> => {
     if (!news) return;
     
@@ -71,13 +103,13 @@ export default function NewsDetailScreen() {
     }
   };
 
-  const handleOpenOriginal = (): void => {
+  const handleReadFullArticle = (): void => {
     if (!news?.url) return;
-    
-    // Navigate to WebView screen with encoded URL and title
-    const encodedUrl = encodeURIComponent(news.url);
-    const encodedTitle = encodeURIComponent(news.title);
-    router.push(`/webview/${encodedUrl}?title=${encodedTitle}` as any);
+    setShowWebView(true);
+  };
+
+  const handleBackFromWebView = (): void => {
+    setShowWebView(false);
   };
 
   const formatDate = (dateString: string): string => {
@@ -103,6 +135,94 @@ export default function NewsDetailScreen() {
     return `${Math.ceil(diffDays / 30)} months ago`;
   };
 
+  // Custom JavaScript to disable interactive elements and show only content
+  const injectedJavaScript = `
+    (function() {
+      // Remove all script tags
+      const scripts = document.querySelectorAll('script');
+      scripts.forEach(script => script.remove());
+      
+      // Remove interactive elements
+      const interactiveElements = document.querySelectorAll('button, input, select, textarea, form, a[href*="javascript"], [onclick], [onload], [onerror]');
+      interactiveElements.forEach(element => {
+        element.style.pointerEvents = 'none';
+        element.onclick = null;
+        element.onload = null;
+        element.onerror = null;
+        if (element.tagName === 'A') {
+          element.removeAttribute('href');
+        }
+      });
+      
+      // Remove navigation, ads, and unnecessary elements
+      const elementsToHide = [
+        'nav', 'header', 'footer', '.nav', '.navigation', '.header', '.footer',
+        '.sidebar', '.ads', '.advertisement', '.social-share', '.comments',
+        '.related-posts', '.newsletter', '.popup', '.modal', '.overlay',
+        '[class*="nav"]', '[class*="menu"]', '[class*="ads"]', '[class*="social"]'
+      ];
+      
+      elementsToHide.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+          element.style.display = 'none';
+        });
+      });
+      
+      // Focus on main content
+      const mainContent = document.querySelector('main, article, .main-content, .article-content, .post-content, .content');
+      if (mainContent) {
+        document.body.innerHTML = '';
+        document.body.appendChild(mainContent);
+      }
+      
+      // Clean up styles for better reading
+      const style = document.createElement('style');
+      style.textContent = \`
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+          line-height: 1.6 !important;
+          color: #333 !important;
+          background: #fff !important;
+          padding: 16px !important;
+          margin: 0 !important;
+        }
+        * {
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+        }
+        img {
+          height: auto !important;
+          display: block !important;
+          margin: 16px auto !important;
+        }
+        p, div, span {
+          font-size: 16px !important;
+          line-height: 1.6 !important;
+        }
+        h1, h2, h3, h4, h5, h6 {
+          color: #1a1a1a !important;
+          margin: 24px 0 16px 0 !important;
+        }
+        a {
+          color: #007AFF !important;
+          text-decoration: none !important;
+          pointer-events: none !important;
+        }
+        video, iframe, embed, object {
+          display: none !important;
+        }
+      \`;
+      document.head.appendChild(style);
+      
+      // Disable all event listeners
+      window.addEventListener = function() {};
+      document.addEventListener = function() {};
+      
+      true; // Return true to indicate successful execution
+    })();
+  `;
+
   if (loading) {
     return <LoadingSpinner message="Loading article..." />;
   }
@@ -116,6 +236,67 @@ export default function NewsDetailScreen() {
     );
   }
 
+  // WebView Screen with Content-Only Display
+  if (showWebView) {
+    return (
+      <View style={styles.container}>
+        {/* WebView Header */}
+        <View style={styles.webViewHeader}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBackFromWebView}>
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.actionButton} onPress={handleSaveArticle}>
+            <Ionicons 
+              name={isArticleSaved() ? "bookmark" : "bookmark-outline"} 
+              size={24} 
+              color={isArticleSaved() ? "#007AFF" : "#333"} 
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Loading Indicator for WebView */}
+        {webViewLoading && (
+          <View style={styles.webViewLoadingContainer}>
+            <LoadingSpinner message="Loading content..." />
+          </View>
+        )}
+
+        {/* Content-Only WebView */}
+        <WebView
+          source={{ uri: news.url }}
+          style={styles.webView}
+          onLoadStart={() => setWebViewLoading(true)}
+          onLoadEnd={() => setWebViewLoading(false)}
+          onError={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            console.warn('WebView error: ', nativeEvent);
+            Alert.alert('Error', 'Failed to load article content. Please try again.');
+            setWebViewLoading(false);
+          }}
+          injectedJavaScript={injectedJavaScript}
+          onMessage={() => {}} // Handle messages if needed
+          javaScriptEnabled={true} // Needed to run the injected script
+          domStorageEnabled={false} // Disable storage
+          thirdPartyCookiesEnabled={false} // Disable third-party cookies
+          sharedCookiesEnabled={false} // Disable shared cookies
+          allowsInlineMediaPlayback={false} // Disable inline media
+          mediaPlaybackRequiresUserAction={true} // Require user action for media
+          allowsBackForwardNavigationGestures={false} // Disable navigation gestures
+          allowsLinkPreview={false} // Disable link preview
+          allowsFullscreenVideo={false} // Disable fullscreen video
+          startInLoadingState={true}
+          scalesPageToFit={true}
+          scrollEnabled={true}
+          bounces={false}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={true}
+        />
+      </View>
+    );
+  }
+
+  // Main Article Screen (unchanged)
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -124,6 +305,13 @@ export default function NewsDetailScreen() {
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <View style={styles.headerActions}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleSaveArticle}>
+            <Ionicons 
+              name={isArticleSaved() ? "bookmark" : "bookmark-outline"} 
+              size={24} 
+              color={isArticleSaved() ? "#007AFF" : "#333"} 
+            />
+         </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
             <Ionicons name="share-outline" size={24} color="#333" />
           </TouchableOpacity>
@@ -159,9 +347,9 @@ export default function NewsDetailScreen() {
           <Text style={styles.description}>{news.description}</Text>
 
           {/* Read Full Article Button */}
-          <TouchableOpacity style={styles.readMoreButton} onPress={handleOpenOriginal}>
+          <TouchableOpacity style={styles.readMoreButton} onPress={handleReadFullArticle}>
             <Text style={styles.readMoreText}>Read Full Article</Text>
-            <Ionicons name="open-outline" size={16} color="#007AFF" style={styles.readMoreIcon} />
+            <Ionicons name="chevron-forward" size={16} color="#007AFF" style={styles.readMoreIcon} />
           </TouchableOpacity>
 
           {/* Related News */}
@@ -210,6 +398,28 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  webViewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 15,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  webViewTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    marginHorizontal: 16,
+  },
   backButton: {
     padding: 8,
     borderRadius: 20,
@@ -226,6 +436,20 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  webView: {
+    flex: 1,
+  },
+  webViewLoadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    zIndex: 1,
   },
   articleImage: {
     width: width,
