@@ -1,18 +1,17 @@
-// app/news/[id].tsx - News Detail Page
+// app/news/[id].tsx - Updated News Detail Page
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    Image,
-    Linking,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  Image,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { cryptoApi } from '../../services/cryptoApi';
@@ -72,20 +71,13 @@ export default function NewsDetailScreen() {
     }
   };
 
-  const handleOpenOriginal = async (): Promise<void> => {
+  const handleOpenOriginal = (): void => {
     if (!news?.url) return;
     
-    try {
-      const supported = await Linking.canOpenURL(news.url);
-      if (supported) {
-        await Linking.openURL(news.url);
-      } else {
-        Alert.alert('Error', 'Unable to open link');
-      }
-    } catch (error) {
-      console.error('Error opening URL:', error);
-      Alert.alert('Error', 'Unable to open link');
-    }
+    // Navigate to WebView screen with encoded URL and title
+    const encodedUrl = encodeURIComponent(news.url);
+    const encodedTitle = encodeURIComponent(news.title);
+    router.push(`/webview/${encodedUrl}?title=${encodedTitle}` as any);
   };
 
   const formatDate = (dateString: string): string => {
