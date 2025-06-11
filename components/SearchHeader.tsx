@@ -1,8 +1,7 @@
-// components/SearchHeader.tsx - Compact Version
+// components/SearchHeader.tsx - Updated to match NewsScreen header style
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    Animated,
     StyleSheet,
     Text,
     TextInput,
@@ -12,11 +11,12 @@ import {
 
 interface SearchHeaderProps {
     title: string;
-    subtitle: string;
+    subtitle?: string;
     onSearchPress: () => void;
     isSearchVisible: boolean;
     searchQuery: string;
     onSearchChange: (query: string) => void;
+    onSearchClose?: () => void;
 }
 
 const SearchHeader: React.FC<SearchHeaderProps> = ({
@@ -26,130 +26,112 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({
     isSearchVisible,
     searchQuery,
     onSearchChange,
+    onSearchClose,
 }) => {
-    const [fadeAnim] = React.useState(new Animated.Value(0));
-
-    React.useEffect(() => {
-        Animated.timing(fadeAnim, {
-            toValue: isSearchVisible ? 1 : 0,
-            duration: 300,
-            useNativeDriver: true,
-        }).start();
-    }, [isSearchVisible, fadeAnim]);
+    const handleSearchClose = () => {
+        onSearchChange('');
+        if (onSearchClose) {
+            onSearchClose();
+        } else {
+            onSearchPress();
+        }
+    };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.headerContent}>
-                <View style={styles.titleSection}>
-                    <Text style={styles.title}>{title}</Text>
-                    <Text style={styles.subtitle}>{subtitle}</Text>
-                </View>
-
-                <TouchableOpacity
-                    style={styles.searchButton}
-                    onPress={onSearchPress}
-                    activeOpacity={0.7}
-                >
-                    <Ionicons
-                        name={isSearchVisible ? "close" : "search"}
-                        size={18}
-                        color="#007AFF"
-                    />
-                </TouchableOpacity>
-            </View>
-
-            {isSearchVisible && (
-                <Animated.View style={[styles.searchContainer, { opacity: fadeAnim }]}>
-                    <View style={styles.searchInputContainer}>
-                        <Ionicons name="search" size={16} color="#666" style={styles.searchIcon} />
+        <View style={styles.header}>
+            <View style={styles.headerTop}>
+                {!isSearchVisible ? (
+                    <>
+                        <View style={styles.titleContainer}>
+                            <Text style={styles.headerTitle}>{title}</Text>
+                            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+                        </View>
+                        <TouchableOpacity
+                            style={styles.searchButton}
+                            onPress={onSearchPress}
+                        >
+                            <Ionicons name="search-outline" size={24} color="#333" />
+                        </TouchableOpacity>
+                    </>
+                ) : (
+                    <View style={styles.searchContainer}>
+                        <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
                         <TextInput
                             style={styles.searchInput}
                             placeholder="Search cryptocurrencies..."
-                            placeholderTextColor="#999"
                             value={searchQuery}
                             onChangeText={onSearchChange}
-                            autoFocus={true}
-                            returnKeyType="search"
+                            autoFocus
                         />
-                        {searchQuery.length > 0 && (
-                            <TouchableOpacity
-                                onPress={() => onSearchChange('')}
-                                style={styles.clearButton}
-                            >
-                                <Ionicons name="close-circle" size={16} color="#999" />
-                            </TouchableOpacity>
-                        )}
+                        <TouchableOpacity
+                            style={styles.closeSearchButton}
+                            onPress={handleSearchClose}
+                        >
+                            <Ionicons name="close-outline" size={20} color="#666" />
+                        </TouchableOpacity>
                     </View>
-                </Animated.View>
-            )}
+                )}
+            </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        backgroundColor: '#fff',
+    header: {
+        backgroundColor: '#FFF',
         paddingTop: 40,
-        paddingHorizontal: 16,
-        paddingBottom: 12,
+        paddingBottom: 0,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
+        elevation: 5,
     },
-    headerContent: {
+    headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 15,
     },
-    titleSection: {
+    titleContainer: {
         flex: 1,
     },
-    title: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#1a1a1a',
-        marginBottom: 2,
+    headerTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
     },
     subtitle: {
         fontSize: 13,
         color: '#666',
         fontWeight: '500',
+        marginTop: 2,
     },
     searchButton: {
-        width: 52,
-        height: 52,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginLeft: 12, 
+        padding: 8,
+        borderRadius: 20,
         backgroundColor: '#F0F0F0',
     },
     searchContainer: {
-        marginTop: 10,
-    },
-    searchInputContainer: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f8f9fa',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderWidth: 1,
-        borderColor: '#e9ecef',
+        backgroundColor: '#F5F5F5',
+        borderRadius: 25,
+        paddingHorizontal: 15,
+        height: 45,
     },
     searchIcon: {
-        marginRight: 8,
+        marginRight: 10,
     },
     searchInput: {
         flex: 1,
-        fontSize: 14,
+        fontSize: 16,
         color: '#333',
-        paddingVertical: 0,
     },
-    clearButton: {
-        padding: 2,
+    closeSearchButton: {
+        padding: 5,
     },
 });
 
