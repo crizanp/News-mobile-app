@@ -2,13 +2,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const settingsOptions = [
@@ -21,14 +21,14 @@ const settingsOptions = [
       { id: 'language', title: 'Language', type: 'select', value: 'English', icon: 'language-outline' },
     ]
   },
-  {
-    section: 'Security',
-    items: [
-      { id: 'biometric', title: 'Biometric Login', type: 'switch', value: false, icon: 'finger-print-outline' },
-      { id: 'twoFactor', title: 'Two-Factor Authentication', type: 'switch', value: true, icon: 'shield-checkmark-outline' },
-      { id: 'autoLock', title: 'Auto Lock', type: 'select', value: '5 minutes', icon: 'lock-closed-outline' },
-    ]
-  },
+  // {
+  //   section: 'Security',
+  //   items: [
+  //     { id: 'biometric', title: 'Biometric Login', type: 'switch', value: false, icon: 'finger-print-outline' },
+  //     { id: 'twoFactor', title: 'Two-Factor Authentication', type: 'switch', value: true, icon: 'shield-checkmark-outline' },
+  //     { id: 'autoLock', title: 'Auto Lock', type: 'select', value: '5 minutes', icon: 'lock-closed-outline' },
+  //   ]
+  // },
   {
     section: 'Account',
     items: [

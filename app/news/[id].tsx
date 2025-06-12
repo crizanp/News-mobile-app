@@ -276,7 +276,7 @@ export default function NewsDetailScreen() {
           }}
           injectedJavaScript={injectedJavaScript}
           onMessage={() => {}} // Handle messages if needed
-          javaScriptEnabled={true} // Needed to run the injected script
+          // javaScriptEnabled={true} // Needed to run the injected script
           domStorageEnabled={false} // Disable storage
           thirdPartyCookiesEnabled={false} // Disable third-party cookies
           sharedCookiesEnabled={false} // Disable shared cookies

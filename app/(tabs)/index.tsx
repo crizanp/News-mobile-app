@@ -1,54 +1,90 @@
+// screens/MarketScreen.tsx - Updated for unlimited XML RSS feeds
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     FlatList,
     RefreshControl,
-    ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
-import FeaturedNewsItem from '../../components/FeaturedNewsItem';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import NewsItem from '../../components/NewsItem';
-import { cryptoApi } from '../../services/cryptoApi';
-import { NewsItem as NewsItemType } from '../../types';
+import CategoryFilter, { MarketCategory } from '../../components/news/CategoryFilter';
+import EmptyState from '../../components/news/EmptyState';
+import LoadingState from '../../components/news/LoadingState';
+import MarketHighlights from '../../components/news/MarketHighlights';
+import NewsList from '../../components/news/NewsList';
+import { rssNewsService } from '../../services/rssNewsService';
+import { NewsItem } from '../../types';
 
-const categories = [
-    { id: 'all', name: 'All', icon: 'grid-outline' },
+// Market categories for filtering news
+const marketCategories: MarketCategory[] = [
+    { id: 'all', name: 'All Markets', icon: 'trending-up-outline' },
     { id: 'bitcoin', name: 'Bitcoin', icon: 'logo-bitcoin' },
     { id: 'ethereum', name: 'Ethereum', icon: 'diamond-outline' },
+    { id: 'altcoins', name: 'Altcoins', icon: 'cellular-outline' },
     { id: 'defi', name: 'DeFi', icon: 'swap-horizontal-outline' },
-    { id: 'nft', name: 'NFT', icon: 'image-outline' },
+    { id: 'trading', name: 'Trading', icon: 'bar-chart-outline' },
+    { id: 'analysis', name: 'Analysis', icon: 'analytics-outline' },
+    { id: 'regulation', name: 'Regulation', icon: 'shield-outline' },
 ];
 
-export default function NewsScreen() {
-    const [news, setNews] = useState<NewsItemType[]>([]);
-    const [featuredNews, setFeaturedNews] = useState<NewsItemType[]>([]);
-    const [loading, setLoading] = useState<boolean>(false); // Changed from true
+export default function MarketScreen() {
+    const [allNews, setAllNews] = useState<NewsItem[]>([]);
+    const [loading, setLoading] = useState<boolean>(false);
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
-    const [searchQuery, setSearchQuery] = useState<string>('');
-    const [showSearch, setShowSearch] = useState<boolean>(false);
+    const [debugInfo, setDebugInfo] = useState<string>('Initializing...');
     const hasInitialData = useRef<boolean>(false);
 
-    const fetchNews = async (): Promise<void> => {
+    const fetchMarketNews = async (forceRefresh: boolean = false): Promise<void> => {
         try {
-            setLoading(true);
-            const data = await cryptoApi.getCryptoNews();
-            setNews(data.slice(3)); // Regular news (excluding first 3 for featured)
-            setFeaturedNews(data.slice(0, 3)); // First 3 as featured news
-            hasInitialData.current = true;
+            console.log('🚀 Starting fetchMarketNews... Force refresh:', forceRefresh);
+            setDebugInfo('Fetching unlimited news from XML feeds...');
+            setLoading(!refreshing);
+
+            let rssNews: NewsItem[];
+
+            if (forceRefresh) {
+                // Force refresh to get latest data
+                rssNews = await rssNewsService.forceRefresh();
+                setDebugInfo('Force refreshed - fetching all new data...');
+            } else {
+                // Get all cached/fresh data (no limit = 0)
+                rssNews = await rssNewsService.getCryptoNews(0);
+                setDebugInfo('Loading cached data with fresh updates...');
+            }
+
+            console.log('📰 Received news items:', rssNews.length);
+
+            if (rssNews.length > 0) {
+                setAllNews(rssNews);
+                hasInitialData.current = true;
+                setDebugInfo(`✅ Loaded ${rssNews.length} news items from XML feeds`);
+
+                // Log feed sources for debugging
+                const sources = [...new Set(rssNews.map(item => item.source.name))];
+                console.log('📡 News sources:', sources);
+
+            } else {
+                console.log('⚠️ No news received');
+                setDebugInfo('No news received - using mock data');
+            }
         } catch (error) {
-            console.error('Error fetching news:', error);
+            console.error('❌ Error fetching market news:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            setDebugInfo(`❌ Error: ${errorMessage}`);
+
             Alert.alert(
-                'Error',
-                'Failed to fetch crypto news. Please try again.',
-                [{ text: 'OK' }]
+                'Network Error',
+                'Failed to fetch market news. Please check your internet connection and try again.',
+                [
+                    { text: 'Force Refresh', onPress: () => fetchMarketNews(true) },
+                    { text: 'Retry', onPress: () => fetchMarketNews(false) },
+                    { text: 'Cancel', style: 'cancel' }
+                ]
             );
         } finally {
             setLoading(false);
@@ -56,136 +92,152 @@ export default function NewsScreen() {
         }
     };
 
-    const onRefresh = (): void => {
+    const onRefresh = useCallback((): void => {
+        console.log('🔄 Refresh triggered');
         setRefreshing(true);
-        fetchNews();
-    };
+        fetchMarketNews(false); // Regular refresh
+    }, []);
 
-    // Only fetch data on first focus, not on every navigation
+    const onForceRefresh = useCallback((): void => {
+        console.log('🔄 Force refresh triggered');
+        setRefreshing(true);
+        fetchMarketNews(true); // Force refresh
+    }, []);
+
+    const handleCategorySelect = useCallback((categoryId: string) => {
+        console.log('🏷️ Category selected:', categoryId);
+        setSelectedCategory(categoryId);
+    }, []);
+
+    // Fetch data on first focus
     useFocusEffect(
         useCallback(() => {
+            console.log('👁️ Screen focused, hasInitialData:', hasInitialData.current);
             if (!hasInitialData.current) {
-                fetchNews();
+                fetchMarketNews(false);
             }
         }, [])
     );
 
-    // Filter news by category
-    const filterNewsByCategory = (newsItems: NewsItemType[], category: string): NewsItemType[] => {
+    // Enhanced filter function with more categories
+    const filterNewsByCategory = useCallback((newsItems: NewsItem[], category: string): NewsItem[] => {
+        console.log(`🔍 Filtering ${newsItems.length} items by category: ${category}`);
+
         if (category === 'all') return newsItems;
-        
-        return newsItems.filter(item => {
+
+        const filtered = newsItems.filter(item => {
             const title = item.title.toLowerCase();
             const description = item.description.toLowerCase();
-            
+            const source = item.source.name.toLowerCase();
+            const feedCategory = (item as any).feedCategory?.toLowerCase() || '';
+
             switch (category) {
                 case 'bitcoin':
-                    return title.includes('bitcoin') || title.includes('btc') || 
-                           description.includes('bitcoin') || description.includes('btc');
+                    return title.includes('bitcoin') || title.includes('btc') ||
+                        description.includes('bitcoin') || description.includes('btc') ||
+                        feedCategory === 'bitcoin';
+
                 case 'ethereum':
-                    return title.includes('ethereum') || title.includes('eth') || 
-                           description.includes('ethereum') || description.includes('eth');
+                    return title.includes('ethereum') || title.includes('eth') ||
+                        description.includes('ethereum') || description.includes('eth') ||
+                        title.includes('vitalik');
+
+                case 'altcoins':
+                    return title.includes('altcoin') || title.includes('alt') ||
+                        title.includes('dogecoin') || title.includes('doge') ||
+                        title.includes('cardano') || title.includes('ada') ||
+                        title.includes('polygon') || title.includes('matic') ||
+                        title.includes('solana') || title.includes('sol') ||
+                        title.includes('chainlink') || title.includes('link') ||
+                        title.includes('polkadot') || title.includes('dot') ||
+                        description.includes('altcoin') || description.includes('alt');
+
                 case 'defi':
-                    return title.includes('defi') || title.includes('decentralized finance') || 
-                           title.includes('yield') || title.includes('lending') || 
-                           description.includes('defi') || description.includes('decentralized finance');
-                case 'nft':
-                    return title.includes('nft') || title.includes('non-fungible') || 
-                           title.includes('opensea') || title.includes('collectible') ||
-                           description.includes('nft') || description.includes('non-fungible');
+                    return title.includes('defi') || title.includes('decentralized finance') ||
+                        title.includes('uniswap') || title.includes('compound') ||
+                        title.includes('aave') || title.includes('yield') ||
+                        title.includes('liquidity') || title.includes('staking') ||
+                        description.includes('defi') || feedCategory === 'defi' ||
+                        source.includes('defiant');
+
+                case 'trading':
+                    return title.includes('trading') || title.includes('trade') ||
+                        title.includes('exchange') || title.includes('volume') ||
+                        title.includes('price') || title.includes('market') ||
+                        title.includes('bullish') || title.includes('bearish') ||
+                        description.includes('trading') || description.includes('exchange');
+
+                case 'analysis':
+                    return title.includes('analysis') || title.includes('forecast') ||
+                        title.includes('prediction') || title.includes('technical') ||
+                        title.includes('chart') || title.includes('outlook') ||
+                        title.includes('target') || title.includes('support') ||
+                        title.includes('resistance') || description.includes('analysis');
+
+                case 'regulation':
+                    return title.includes('regulation') || title.includes('regulatory') ||
+                        title.includes('sec') || title.includes('government') ||
+                        title.includes('legal') || title.includes('compliance') ||
+                        title.includes('ban') || title.includes('approve') ||
+                        title.includes('law') || description.includes('regulation');
+
                 default:
                     return true;
             }
         });
-    };
 
-    // Apply category filter first, then search filter
-    const categoryFilteredNews = filterNewsByCategory(news, selectedCategory);
-    const categoryFilteredFeatured = filterNewsByCategory(featuredNews, selectedCategory);
-    
-    const finalFilteredNews = showSearch && searchQuery 
-        ? categoryFilteredNews.filter(item =>
-            item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.description.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        : categoryFilteredNews;
+        console.log(`🔍 Filtered to ${filtered.length} items`);
+        return filtered;
+    }, []);
 
-    const finalFilteredFeatured = showSearch && searchQuery
-        ? categoryFilteredFeatured.filter(item =>
-            item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.description.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        : categoryFilteredFeatured;
+    // Memoized filtered data
+    const filteredNews = useMemo(() => {
+        const result = filterNewsByCategory(allNews, selectedCategory);
+        console.log(`📊 Filtered news: ${result.length} items`);
+        return result;
+    }, [allNews, selectedCategory, filterNewsByCategory]);
 
-    // Get category display name
-    const getCategoryDisplayName = (categoryId: string): string => {
-        const category = categories.find(cat => cat.id === categoryId);
-        return category ? category.name : 'All';
-    };
+    // Split filtered news into featured and regular
+    const { featuredNews, regularNews } = useMemo(() => {
+        const featured = filteredNews.slice(0, 6); // More featured articles
+        const regular = filteredNews.slice(6);
 
-    // Get header title based on current state
-    const getHeaderTitle = (): string => {
-        if (showSearch && searchQuery) {
-            return `Search Results (${finalFilteredNews.length})`;
-        }
-        
-        if (selectedCategory === 'all') {
-            return 'All News';
-        }
-        
-        return `${getCategoryDisplayName(selectedCategory)} News`;
-    };
+        console.log(`⭐ Featured: ${featured.length}, Regular: ${regular.length}`);
+        return { featuredNews: featured, regularNews: regular };
+    }, [filteredNews]);
 
-    const renderCategoryItem = ({ item }: { item: typeof categories[0] }) => (
-        <TouchableOpacity
-            style={[
-                styles.categoryItem,
-                selectedCategory === item.id && styles.categoryItemActive
-            ]}
-            onPress={() => {
-                setSelectedCategory(item.id);
-                // Reset search when changing category
-                setSearchQuery('');
-                setShowSearch(false);
-            }}
-        >
-            <Ionicons
-                name={item.icon as any}
-                size={16}
-                color={selectedCategory === item.id ? '#FFF' : '#666'}
-            />
-            <Text style={[
-                styles.categoryText,
-                selectedCategory === item.id && styles.categoryTextActive
-            ]}>
-                {item.name}
+    // Debug info display
+    const debugDisplay = __DEV__ ? (
+        <View style={styles.debugContainer}>
+            <Text style={styles.debugText}>
+                Debug: {debugInfo} | Total: {allNews.length} | Filtered: {filteredNews.length} |
+                Featured: {featuredNews.length} | Regular: {regularNews.length} |
+                Loading: {loading ? 'YES' : 'NO'} | HasData: {hasInitialData.current ? 'YES' : 'NO'}
             </Text>
-        </TouchableOpacity>
-    );
+        </View>
+    ) : null;
 
-    const renderFeaturedItem = ({ item }: { item: NewsItemType }) => (
-        <FeaturedNewsItem item={item} />
-    );
-
-    const renderNewsItem = ({ item }: { item: NewsItemType }) => (
-        <NewsItem item={item} />
-    );
-
-    // Show loading spinner only during initial load (not refresh)
+    // Loading state
     if (loading && !refreshing && !hasInitialData.current) {
-        return <LoadingSpinner message="Loading latest news..." />;
-    }
-
-    // Show empty state when no data and not loading
-    if (!hasInitialData.current && !loading) {
+        console.log('🔄 Showing loading state');
         return (
             <View style={styles.container}>
+                {debugDisplay}
+                <LoadingState />
+            </View>
+        );
+    }
+
+    // Empty state
+    if (!hasInitialData.current && !loading) {
+        console.log('📭 Showing empty state');
+        return (
+            <View style={styles.container}>
+                {debugDisplay}
                 <View style={styles.header}>
-                    <View style={styles.headerTop}>
-                        <Text style={styles.headerTitle}>Crypto News</Text>
-                    </View>
+                    <Text style={styles.headerTitle}>Market News</Text>
                 </View>
-                <ScrollView
+                <FlatList
                     style={styles.content}
                     refreshControl={
                         <RefreshControl
@@ -195,59 +247,44 @@ export default function NewsScreen() {
                             tintColor="#007AFF"
                         />
                     }
-                >
-                    <View style={styles.noDataContainer}>
-                        <Ionicons name="newspaper-outline" size={64} color="#ccc" />
-                        <Text style={styles.noDataText}>Pull down to load latest crypto news</Text>
-                        <TouchableOpacity style={styles.loadButton} onPress={onRefresh}>
-                            <Text style={styles.loadButtonText}>Load News</Text>
-                        </TouchableOpacity>
-                    </View>
-                </ScrollView>
+                    data={[]}
+                    renderItem={() => null}
+                    ListEmptyComponent={
+                        <EmptyState onButtonPress={onRefresh} />
+                    }
+                />
             </View>
         );
     }
 
+    console.log('🏠 Rendering main screen with data');
     return (
         <View style={styles.container}>
+            {/* {debugDisplay} */}
+
             {/* Header */}
             <View style={styles.header}>
-                <View style={styles.headerTop}>
-                    {!showSearch ? (
-                        <>
-                            <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
-                            <TouchableOpacity
-                                style={styles.searchButton}
-                                onPress={() => setShowSearch(true)}
-                            >
-                                <Ionicons name="search-outline" size={24} color="#333" />
-                            </TouchableOpacity>
-                        </>
-                    ) : (
-                        <View style={styles.searchContainer}>
-                            <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
-                            <TextInput
-                                style={styles.searchInput}
-                                placeholder="Search news..."
-                                value={searchQuery}
-                                onChangeText={setSearchQuery}
-                                autoFocus
-                            />
-                            <TouchableOpacity
-                                style={styles.closeSearchButton}
-                                onPress={() => {
-                                    setShowSearch(false);
-                                    setSearchQuery('');
-                                }}
-                            >
-                                <Ionicons name="close-outline" size={20} color="#666" />
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                <Text style={styles.headerTitle}>Market News</Text>
+                <View style={styles.headerButtons}>
+                    <TouchableOpacity
+                        style={[styles.refreshButton, styles.forceRefreshButton]}
+                        onPress={onForceRefresh}
+                        disabled={refreshing}
+                    >
+                        <Ionicons name="refresh-circle-outline" size={20} color="#FF6B35" />
+                        <Text style={styles.forceRefreshText}>Force</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.refreshButton}
+                        onPress={onRefresh}
+                        disabled={refreshing}
+                    >
+                        <Ionicons name="refresh-outline" size={20} color="#007AFF" />
+                    </TouchableOpacity>
                 </View>
             </View>
 
-            <ScrollView
+            <FlatList
                 style={styles.content}
                 refreshControl={
                     <RefreshControl
@@ -258,63 +295,32 @@ export default function NewsScreen() {
                     />
                 }
                 showsVerticalScrollIndicator={false}
-            >
-                {/* Categories */}
-                <View style={styles.categoriesContainer}>
-                    <FlatList
-                        data={categories}
-                        renderItem={renderCategoryItem}
-                        keyExtractor={(item) => item.id}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.categoriesList}
-                    />
-                </View>
-
-                {/* Featured News Section */}
-                {!showSearch && finalFilteredFeatured.length > 0 && (
-                    <View style={styles.featuredSection}>
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Featured</Text>
-                            <TouchableOpacity>
-                                <Text style={styles.seeAllText}>See All</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <FlatList
-                            data={finalFilteredFeatured}
-                            renderItem={renderFeaturedItem}
-                            keyExtractor={(item) => item.id.toString()}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.featuredList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={15}
+                windowSize={15}
+                initialNumToRender={8}
+                updateCellsBatchingPeriod={100}
+                data={[{ type: 'content' }]}
+                renderItem={() => (
+                    <>
+                        {/* Categories */}
+                        <CategoryFilter
+                            categories={marketCategories}
+                            selectedCategory={selectedCategory}
+                            onCategorySelect={handleCategorySelect}
                         />
-                    </View>
-                )}
 
-                {/* Regular News Section */}
-                <View style={styles.newsSection}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>
-                            {selectedCategory === 'all' ? 'Recent News' : `Recent ${getCategoryDisplayName(selectedCategory)} News`}
-                        </Text>
-                    </View>
-                    {finalFilteredNews.length > 0 ? (
-                        finalFilteredNews.map((item) => (
-                            <NewsItem key={item.id} item={item} />
-                        ))
-                    ) : (
-                        <View style={styles.noResultsContainer}>
-                            <Ionicons name="newspaper-outline" size={48} color="#ccc" />
-                            <Text style={styles.noResultsText}>
-                                {showSearch && searchQuery 
-                                    ? 'No news found matching your search'
-                                    : `No ${getCategoryDisplayName(selectedCategory).toLowerCase()} news available`
-                                }
-                            </Text>
-                        </View>
-                    )}
-                </View>
-            </ScrollView>
+                        {/* Market Highlights */}
+                        <MarketHighlights news={featuredNews} />
+
+                        {/* All filtered news */}
+                        <NewsList news={regularNews} />
+
+
+                    </>
+                )}
+                keyExtractor={() => 'content'}
+            />
         </View>
     );
 }
@@ -327,145 +333,67 @@ const styles = StyleSheet.create({
     header: {
         backgroundColor: '#FFF',
         paddingTop: 40,
-        paddingBottom: 0,
+        paddingBottom: 15,
+        paddingHorizontal: 20,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 5,
     },
-    headerTop: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        marginBottom: 15,
-    },
     headerTitle: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#1A1A1A',
     },
-    searchButton: {
-        padding: 8,
-        borderRadius: 20,
-        backgroundColor: '#F0F0F0',
-    },
-    searchContainer: {
-        flex: 1,
+    headerButtons: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F5F5F5',
-        borderRadius: 25,
-        paddingHorizontal: 15,
-        height: 45,
+        gap: 8,
     },
-    searchIcon: {
-        marginRight: 10,
+    refreshButton: {
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: '#F0F8FF',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
     },
-    searchInput: {
-        flex: 1,
-        fontSize: 16,
-        color: '#333',
+    forceRefreshButton: {
+        backgroundColor: '#FFF0E6',
     },
-    closeSearchButton: {
-        padding: 5,
+    forceRefreshText: {
+        fontSize: 10,
+        color: '#FF6B35',
+        fontWeight: '600',
     },
     content: {
         flex: 1,
     },
-    categoriesContainer: {
-        paddingVertical: 20,
+    debugContainer: {
+        backgroundColor: '#FFE4B5',
+        padding: 10,
+        margin: 5,
+        borderRadius: 5,
     },
-    categoriesList: {
-        paddingHorizontal: 20,
+    debugSection: {
+        backgroundColor: '#F0F0F0',
+        padding: 15,
+        margin: 20,
+        borderRadius: 8,
     },
-    categoryItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        marginRight: 12,
-        borderRadius: 20,
-        backgroundColor: '#FFF',
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-    },
-    categoryItemActive: {
-        backgroundColor: '#007AFF',
-        borderColor: '#007AFF',
-    },
-    categoryText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#666',
-        marginLeft: 6,
-    },
-    categoryTextActive: {
-        color: '#FFF',
-    },
-    featuredSection: {
-        marginBottom: 30,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        marginBottom: 15,
-    },
-    sectionTitle: {
-        fontSize: 22,
+    debugTitle: {
+        fontSize: 16,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        marginBottom: 10,
+        color: '#333',
     },
-    seeAllText: {
-        fontSize: 14,
-        color: '#007AFF',
-        fontWeight: '600',
-    },
-    featuredList: {
-        paddingLeft: 20,
-    },
-    newsSection: {
-        paddingBottom: 20,
-    },
-    noResultsContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 60,
-        paddingHorizontal: 20,
-    },
-    noResultsText: {
-        fontSize: 16,
+    debugText: {
+        fontSize: 12,
         color: '#666',
-        textAlign: 'center',
-        marginTop: 16,
-        lineHeight: 24,
-    },
-    noDataContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 100,
-        paddingHorizontal: 20,
-    },
-    noDataText: {
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        marginTop: 16,
-        marginBottom: 24,
-        lineHeight: 24,
-    },
-    loadButton: {
-        backgroundColor: '#007AFF',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 25,
-    },
-    loadButtonText: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: '600',
+        fontFamily: 'monospace',
     },
 });
