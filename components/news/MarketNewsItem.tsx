@@ -16,7 +16,7 @@ const { width } = Dimensions.get('window');
 interface MarketNewsItemProps {
     item: NewsItem;
     isHorizontal?: boolean;
-    index?: number; // Add index prop as fallback
+    index?: number;
 }
 
 const MarketNewsItem = React.memo<MarketNewsItemProps>(({ 
@@ -37,14 +37,34 @@ const MarketNewsItem = React.memo<MarketNewsItemProps>(({
     }, []);
 
     const handlePress = useCallback(() => {
-        // Use item.id if available, otherwise use index or generate from URL
-        const newsId = item.id || 
-                      btoa(item.url || `${item.title}-${index}`).replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
-        
-        router.push(`/news/${newsId}` as any);
-    }, [item.id, item.url, item.title, index, router]);
+        try {
+            // Create a more reliable ID generation
+            let newsId: string;
+            
+            if (item.id) {
+                // Use existing ID if available
+                newsId = item.id.toString();
+            } else {
+                // Generate ID from URL or title + index
+                const baseString = item.url || `${item.title}-${item.publishedAt}-${index}`;
+                // Create a simple hash-like ID
+                newsId = baseString
+                    .replace(/[^a-zA-Z0-9]/g, '') // Remove special characters
+                    .substring(0, 20) || // Take first 20 characters
+                    `news_${Date.now()}_${index}`; // Fallback ID
+            }
+            
+            console.log('Navigating to news detail with ID:', newsId);
+            console.log('Item data:', { title: item.title, url: item.url });
+            
+            // Navigate to news detail page
+            router.push(`/news/${newsId}`);
+            
+        } catch (error) {
+            console.error('Navigation error:', error);
+        }
+    }, [item, index, router]);
 
-    // Your existing getTimeAgo function and other code...
     const getTimeAgo = useCallback((publishedAt: string, now: number): string => {
         try {
             const publishedDate = new Date(publishedAt);
@@ -88,9 +108,19 @@ const MarketNewsItem = React.memo<MarketNewsItemProps>(({
         }
     }, []);
 
+    // Check if this is a Cryptews source
+    const isCryptews = useCallback((): boolean => {
+        const sourceName = item.source?.name?.toLowerCase().trim() || '';
+        return sourceName === 'cryptews' || sourceName.includes('cryptews');
+    }, [item.source]);
+
     const timeAgo = getTimeAgo(item.publishedAt, currentTime);
 
-    // Rest of your component JSX remains the same...
+    // Ensure we have a valid image URL
+    const imageSource = item.urlToImage ? 
+        { uri: item.urlToImage } : 
+        { uri: 'https://via.placeholder.com/300x200?text=No+Image' };
+
     if (isHorizontal) {
         return (
             <TouchableOpacity 
@@ -99,17 +129,27 @@ const MarketNewsItem = React.memo<MarketNewsItemProps>(({
                 activeOpacity={0.7}
             >
                 <ImageBackground
-                    source={{ uri: item.urlToImage }}
+                    source={imageSource}
                     style={styles.horizontalNewsBackground}
                     imageStyle={styles.horizontalNewsImageStyle}
                     resizeMode="cover"
+                    defaultSource={{ uri: 'https://via.placeholder.com/300x200?text=Loading' }}
                 >
                     <View style={styles.horizontalOverlay} />
                     
+                    {/* Sponsored tag for Cryptews */}
+                    {isCryptews() && (
+                        <View style={styles.sponsoredTag}>
+                            <Text style={styles.sponsoredText}>Sponsored</Text>
+                        </View>
+                    )}
+                    
                     <View style={styles.horizontalNewsContent}>
-                        <Text style={styles.horizontalNewsSource}>{item.source.name}</Text>
+                        <Text style={styles.horizontalNewsSource}>
+                            {item.source?.name || 'Unknown Source'}
+                        </Text>
                         <Text style={styles.horizontalNewsTitle} numberOfLines={2}>
-                            {item.title}
+                            {item.title || 'No Title Available'}
                         </Text>
                         <Text style={styles.horizontalNewsTime}>
                             {timeAgo}
@@ -127,18 +167,21 @@ const MarketNewsItem = React.memo<MarketNewsItemProps>(({
             activeOpacity={0.7}
         >
             <Image
-                source={{ uri: item.urlToImage }}
+                source={imageSource}
                 style={styles.compactNewsImage}
                 resizeMode="cover"
                 fadeDuration={0}
                 progressiveRenderingEnabled={true}
+                defaultSource={{ uri: 'https://via.placeholder.com/120x80?text=Loading' }}
             />
             <View style={styles.compactNewsContent}>
                 <Text style={styles.compactNewsTitle} numberOfLines={2}>
-                    {item.title}
+                    {item.title || 'No Title Available'}
                 </Text>
                 <View style={styles.compactNewsFooter}>
-                    <Text style={styles.compactNewsSource}>{item.source.name}</Text>
+                    <Text style={styles.compactNewsSource}>
+                        {item.source?.name || 'Unknown Source'}
+                    </Text>
                     <Text style={styles.compactNewsTime}>{timeAgo}</Text>
                 </View>
             </View>
@@ -146,7 +189,6 @@ const MarketNewsItem = React.memo<MarketNewsItemProps>(({
     );
 });
 
-// Styles remain the same...
 const styles = StyleSheet.create({
     horizontalNewsItem: {
         width: width * 0.75,
@@ -171,6 +213,23 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(0, 0, 0, 0.45)',
         borderRadius: 12,
+    },
+    sponsoredTag: {
+        position: 'absolute',
+        top: 12,
+        left: 12,
+        backgroundColor: '#FFD700', // Yellow background
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        zIndex: 2,
+    },
+    sponsoredText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: '#000000', // Black text for good contrast on yellow
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     horizontalNewsContent: {
         padding: 15,

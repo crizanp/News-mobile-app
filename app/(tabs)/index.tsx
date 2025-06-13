@@ -1,4 +1,4 @@
-// screens/MarketScreen.tsx - Updated with Back to Top functionality
+// MarketScreen.tsx - Fixed featured news logic to prioritize Cryptews
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -227,32 +227,83 @@ export default function MarketScreen() {
         return result;
     }, [allNews, selectedCategory, filterNewsByCategory]);
 
-    // Split filtered news into featured and regular
-    const { featuredNews, regularNews } = useMemo(() => {
-        const featured = filteredNews.slice(0, 6); // More featured articles
-        const regular = filteredNews.slice(6);
+    // FIXED: Split filtered news with Cryptews prioritization
+   // Replace the featured news logic in MarketScreen.tsx (around line 186-220)
+// FIXED: Show only latest 1 Cryptews article in featured section
+const { featuredNews, regularNews } = useMemo(() => {
+    if (filteredNews.length === 0) {
+        return { featuredNews: [], regularNews: [] };
+    }
 
-        console.log(`⭐ Featured: ${featured.length}, Regular: ${regular.length}`);
-        return { featuredNews: featured, regularNews: regular };
-    }, [filteredNews]);
+    // Helper function to check if item is from Cryptews (case-insensitive)
+    const isCryptews = (item: NewsItem): boolean => {
+        const sourceName = item.source.name.toLowerCase().trim();
+        return sourceName === 'cryptews' || sourceName.includes('cryptews');
+    };
 
-    // Debug info display
-    const debugDisplay = __DEV__ ? (
-        <View style={styles.debugContainer}>
-            <Text style={styles.debugText}>
-                Debug: {debugInfo} | Total: {allNews.length} | Filtered: {filteredNews.length} |
-                Featured: {featuredNews.length} | Regular: {regularNews.length} |
-                Loading: {loading ? 'YES' : 'NO'} | HasData: {hasInitialData.current ? 'YES' : 'NO'}
-            </Text>
-        </View>
-    ) : null;
+    // Helper function to get publication timestamp
+    const getPublishTime = (item: NewsItem): number => {
+        try {
+            return new Date(item.publishedAt).getTime();
+        } catch {
+            return 0;
+        }
+    };
+
+    // Separate Cryptews and other news
+    const cryptewsNews = filteredNews.filter(isCryptews);
+    const otherNews = filteredNews.filter(item => !isCryptews(item));
+
+    // Sort each group by publication time (newest first)
+    const sortedCryptewsNews = cryptewsNews.sort((a, b) => 
+        getPublishTime(b) - getPublishTime(a)
+    );
+    const sortedOtherNews = otherNews.sort((a, b) => 
+        getPublishTime(b) - getPublishTime(a)
+    );
+
+    // Build featured news: 1 latest Cryptews + 5 from other sources (total 6)
+    const maxFeatured = 6;
+    let featured: NewsItem[] = [];
+    
+    // First, add only the latest 1 Cryptews article if available
+    if (sortedCryptewsNews.length > 0) {
+        featured = [sortedCryptewsNews[0]]; // Only take the first (latest) one
+    }
+    
+    // Then fill remaining slots with other sources (up to 5 more)
+    const remainingSlots = maxFeatured - featured.length;
+    if (remainingSlots > 0) {
+        featured = [...featured, ...sortedOtherNews.slice(0, remainingSlots)];
+    }
+
+    // Regular news: everything not in featured (including other Cryptews articles)
+    const featuredIds = new Set(featured.map(item => item.id || item.url));
+    const regular = filteredNews.filter(item => 
+        !featuredIds.has(item.id || item.url)
+    ).sort((a, b) => getPublishTime(b) - getPublishTime(a));
+
+    console.log(`⭐ Featured: ${featured.length} (${featured.filter(isCryptews).length} Cryptews + ${featured.length - featured.filter(isCryptews).length} others), Regular: ${regular.length}`);
+    
+    // Debug logging
+    if (__DEV__) {
+        console.log('🎯 Featured news (1 Cryptews + 5 others = 6 total):');
+        featured.forEach((item, index) => {
+            console.log(`  ${index + 1}. ${isCryptews(item) ? '[CRYPTEWS]' : '[OTHER]'} ${item.source.name}: ${item.title.substring(0, 50)}...`);
+        });
+    }
+
+    return { featuredNews: featured, regularNews: regular };
+}, [filteredNews]);
+
+   
 
     // Loading state
     if (loading && !refreshing && !hasInitialData.current) {
         console.log('🔄 Showing loading state');
         return (
             <View style={styles.container}>
-                {debugDisplay}
+                {}
                 <LoadingState />
             </View>
         );
@@ -263,7 +314,6 @@ export default function MarketScreen() {
         console.log('📭 Showing empty state');
         return (
             <View style={styles.container}>
-                {debugDisplay}
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Market News</Text>
                 </View>
@@ -301,15 +351,7 @@ export default function MarketScreen() {
                         onPress={onForceRefresh}
                         disabled={refreshing}
                     >
-                        <Ionicons name="refresh-circle-outline" size={20} color="#FF6B35" />
-                        <Text style={styles.forceRefreshText}>Force</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.refreshButton}
-                        onPress={onRefresh}
-                        disabled={refreshing}
-                    >
-                        <Ionicons name="refresh-outline" size={20} color="#007AFF" />
+                        <Ionicons name="refresh-circle-outline" size={28} color="#FF6B35" />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -413,18 +455,16 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     refreshButton: {
-        padding: 8,
+        padding: 4,
         borderRadius: 20,
-        backgroundColor: '#F0F8FF',
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
     },
     forceRefreshButton: {
-        backgroundColor: '#FFF0E6',
     },
     forceRefreshText: {
-        fontSize: 10,
+        fontSize: 20,
         color: '#FF6B35',
         fontWeight: '600',
     },

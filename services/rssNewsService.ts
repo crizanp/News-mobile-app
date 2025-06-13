@@ -624,11 +624,7 @@ class RSSNewsService {
             }
         }
 
-        // Debug: Log the item structure to help identify the correct path
-        if (process.env.NODE_ENV === 'development') {
-            console.log('🔍 Debug: Item structure for image extraction:', JSON.stringify(item, null, 2));
-        }
-
+      
         return '';
     }
 

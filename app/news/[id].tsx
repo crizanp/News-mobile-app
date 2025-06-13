@@ -1,4 +1,3 @@
-// app/news/[id].tsx - News Detail Page with Content-Only WebView
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -15,7 +14,7 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { cryptoApi } from '../../services/cryptoApi';
+import { rssNewsService } from '../../services/rssNewsService'; // Updated import
 import { NewsItem as NewsItemType } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -31,32 +30,116 @@ export default function NewsDetailScreen() {
   const [savedArticles, setSavedArticles] = useState<string[]>([]);
 
   useEffect(() => {
+    console.log('NewsDetailScreen mounted with ID:', id);
     fetchNewsDetail();
     loadSavedArticles();
   }, [id]);
 
   const fetchNewsDetail = async (): Promise<void> => {
     try {
-      // In a real app, you'd have an API endpoint for individual news items
-      // For now, we'll fetch all news and find the specific item
-      const allNews = await cryptoApi.getCryptoNews();
-      const newsItem = allNews.find(item => item.id.toString() === id);
-      
-      if (newsItem) {
-        setNews(newsItem);
-        // Get related news (excluding current item)
-        const related = allNews
-          .filter(item => item.id.toString() !== id)
-          .slice(0, 3);
-        setRelatedNews(related);
-      } else {
-        Alert.alert('Error', 'News article not found');
-        router.back();
+      console.log('Fetching news detail for ID:', id);
+
+      // Get all news from RSS service (same as MarketScreen)
+      const allNews = await rssNewsService.getCryptoNews(0); // 0 = no limit
+      console.log('Total news items fetched:', allNews.length);
+
+      // Try different methods to find the news item
+      let newsItem: NewsItemType | undefined;
+
+      // Method 1: Direct ID match
+      newsItem = allNews.find(item => item.id?.toString() === id?.toString());
+
+      // Method 2: If no direct match, try to find by generated ID pattern
+      if (!newsItem && id) {
+        const idString = id.toString();
+        newsItem = allNews.find((item, index) => {
+          // Check if the item matches our ID generation logic
+          if (item.id?.toString() === idString) return true;
+
+          // Check generated ID from URL or title
+          const baseString = item.url || `${item.title}-${item.publishedAt}-${index}`;
+          const generatedId = baseString
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .substring(0, 20);
+
+          return generatedId === idString;
+        });
       }
+
+      // Method 3: If still no match, try to find by partial URL or title match
+      if (!newsItem && id) {
+        const idString = id.toString().toLowerCase();
+        newsItem = allNews.find(item =>
+          item.url?.toLowerCase().includes(idString) ||
+          item.title?.toLowerCase().replace(/[^a-zA-Z0-9]/g, '').includes(idString)
+        );
+      }
+
+      // Method 4: Last resort - take the first item (for testing)
+      if (!newsItem && allNews.length > 0) {
+        console.warn('Could not find specific news item, using first available');
+        newsItem = allNews[0];
+      }
+
+      if (newsItem) {
+        console.log('Found news item:', newsItem.title);
+        setNews(newsItem);
+
+        // Get related news - prioritize same source, then latest news
+        const sameSourceNews = allNews.filter(item =>
+          item.id !== newsItem!.id &&
+          item.url !== newsItem!.url &&
+          item.source?.name === newsItem!.source?.name
+        );
+
+        const otherNews = allNews.filter(item =>
+          item.id !== newsItem!.id &&
+          item.url !== newsItem!.url &&
+          item.source?.name !== newsItem!.source?.name
+        );
+
+        // Combine same source news first, then other news, limit to 3
+        const related = [...sameSourceNews, ...otherNews].slice(0, 3);
+        setRelatedNews(related);
+      }
+
+      // Replace the getTimeAgo function (around line 160-180)
+      const getTimeAgo = (dateString: string): string => {
+        try {
+          const now = new Date();
+          const date = new Date(dateString);
+
+          if (isNaN(date.getTime())) {
+            return 'Recently';
+          }
+
+          const diffTime = now.getTime() - date.getTime(); // Remove Math.abs to get proper direction
+          const diffMinutes = Math.floor(diffTime / (1000 * 60));
+          const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); // Use Math.floor instead of Math.ceil
+
+          if (diffTime < 0) return 'Recently'; // Future date
+          if (diffMinutes < 1) return 'Just now';
+          if (diffMinutes < 60) return `${diffMinutes}m ago`;
+          if (diffHours < 24) return `${diffHours}h ago`;
+          if (diffDays === 1) return '1 day ago';
+          if (diffDays < 7) return `${diffDays} days ago`;
+          if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+          return `${Math.floor(diffDays / 30)} months ago`;
+        } catch (error) {
+          return 'Recently';
+        }
+      };
     } catch (error) {
       console.error('Error fetching news detail:', error);
-      Alert.alert('Error', 'Failed to load news article');
-      router.back();
+      Alert.alert(
+        'Error',
+        'Failed to load news article. Please try again.',
+        [
+          { text: 'Retry', onPress: fetchNewsDetail },
+          { text: 'Go Back', onPress: () => router.back() }
+        ]
+      );
     } finally {
       setLoading(false);
     }
@@ -71,7 +154,7 @@ export default function NewsDetailScreen() {
   const handleSaveArticle = (): void => {
     if (!news) return;
 
-    const articleId = news.id.toString();
+    const articleId = news.id?.toString() || news.url || 'unknown';
     const isCurrentlySaved = savedArticles.includes(articleId);
 
     if (isCurrentlySaved) {
@@ -86,15 +169,17 @@ export default function NewsDetailScreen() {
   };
 
   const isArticleSaved = (): boolean => {
-    return news ? savedArticles.includes(news.id.toString()) : false;
+    if (!news) return false;
+    const articleId = news.id?.toString() || news.url || 'unknown';
+    return savedArticles.includes(articleId);
   };
 
   const handleShare = async (): Promise<void> => {
     if (!news) return;
-    
+
     try {
       await Share.share({
-        message: `${news.title}\n\n${news.description}\n\nRead more: ${news.url}`,
+        message: `${news.title}\n\n${news.description || ''}\n\nRead more: ${news.url}`,
         title: news.title,
         url: news.url,
       });
@@ -104,7 +189,11 @@ export default function NewsDetailScreen() {
   };
 
   const handleReadFullArticle = (): void => {
-    if (!news?.url) return;
+    if (!news?.url) {
+      Alert.alert('Error', 'Article URL not available');
+      return;
+    }
+    console.log('Opening WebView for:', news.url);
     setShowWebView(true);
   };
 
@@ -113,113 +202,142 @@ export default function NewsDetailScreen() {
   };
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Date not available';
+      }
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      return 'Date not available';
+    }
   };
 
   const getTimeAgo = (dateString: string): string => {
+  try {
     const now = new Date();
     const date = new Date(dateString);
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
+    if (isNaN(date.getTime())) {
+      return 'Recently';
+    }
+
+    const diffTime = now.getTime() - date.getTime(); // Remove Math.abs to get proper direction
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+
+    if (diffTime < 0) return 'Recently'; // Future date
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays === 1) return '1 day ago';
     if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    return `${Math.ceil(diffDays / 30)} months ago`;
-  };
+    if (diffWeeks < 4) return `${diffWeeks} weeks ago`;
+    return `${diffMonths} months ago`;
+  } catch (error) {
+    return 'Recently';
+  }
+};
 
   // Custom JavaScript to disable interactive elements and show only content
   const injectedJavaScript = `
     (function() {
-      // Remove all script tags
-      const scripts = document.querySelectorAll('script');
-      scripts.forEach(script => script.remove());
-      
-      // Remove interactive elements
-      const interactiveElements = document.querySelectorAll('button, input, select, textarea, form, a[href*="javascript"], [onclick], [onload], [onerror]');
-      interactiveElements.forEach(element => {
-        element.style.pointerEvents = 'none';
-        element.onclick = null;
-        element.onload = null;
-        element.onerror = null;
-        if (element.tagName === 'A') {
-          element.removeAttribute('href');
-        }
-      });
-      
-      // Remove navigation, ads, and unnecessary elements
-      const elementsToHide = [
-        'nav', 'header', 'footer', '.nav', '.navigation', '.header', '.footer',
-        '.sidebar', '.ads', '.advertisement', '.social-share', '.comments',
-        '.related-posts', '.newsletter', '.popup', '.modal', '.overlay',
-        '[class*="nav"]', '[class*="menu"]', '[class*="ads"]', '[class*="social"]'
-      ];
-      
-      elementsToHide.forEach(selector => {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(element => {
-          element.style.display = 'none';
+      try {
+        // Remove all script tags
+        const scripts = document.querySelectorAll('script');
+        scripts.forEach(script => script.remove());
+        
+        // Remove interactive elements
+        const interactiveElements = document.querySelectorAll('button, input, select, textarea, form, a[href*="javascript"], [onclick], [onload], [onerror]');
+        interactiveElements.forEach(element => {
+          element.style.pointerEvents = 'none';
+          element.onclick = null;
+          element.onload = null;
+          element.onerror = null;
+          if (element.tagName === 'A') {
+            element.removeAttribute('href');
+          }
         });
-      });
-      
-      // Focus on main content
-      const mainContent = document.querySelector('main, article, .main-content, .article-content, .post-content, .content');
-      if (mainContent) {
-        document.body.innerHTML = '';
-        document.body.appendChild(mainContent);
+        
+        // Remove navigation, ads, and unnecessary elements
+        const elementsToHide = [
+          'nav', 'header', 'footer', '.nav', '.navigation', '.header', '.footer',
+          '.sidebar', '.ads', '.advertisement', '.social-share', '.comments',
+          '.related-posts', '.newsletter', '.popup', '.modal', '.overlay',
+          '[class*="nav"]', '[class*="menu"]', '[class*="ads"]', '[class*="social"]'
+        ];
+        
+        elementsToHide.forEach(selector => {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            element.style.display = 'none';
+          });
+        });
+        
+        // Focus on main content
+        const mainContent = document.querySelector('main, article, .main-content, .article-content, .post-content, .content');
+        if (mainContent) {
+          document.body.innerHTML = '';
+          document.body.appendChild(mainContent);
+        }
+        
+        // Clean up styles for better reading
+        const style = document.createElement('style');
+        style.textContent = \`
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+            line-height: 1.6 !important;
+            color: #333 !important;
+            background: #fff !important;
+            padding: 16px !important;
+            margin: 0 !important;
+          }
+          * {
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+          }
+          img {
+            height: auto !important;
+            display: block !important;
+            margin: 16px auto !important;
+          }
+          p, div, span {
+            font-size: 16px !important;
+            line-height: 1.6 !important;
+          }
+          h1, h2, h3, h4, h5, h6 {
+            color: #1a1a1a !important;
+            margin: 24px 0 16px 0 !important;
+          }
+          a {
+            color: #007AFF !important;
+            text-decoration: none !important;
+            pointer-events: none !important;
+          }
+          video, iframe, embed, object {
+            display: none !important;
+          }
+        \`;
+        document.head.appendChild(style);
+        
+        // Disable all event listeners
+        window.addEventListener = function() {};
+        document.addEventListener = function() {};
+        
+        return true; // Return true to indicate successful execution
+      } catch (error) {
+        console.error('Injected JavaScript error:', error);
+        return false;
       }
-      
-      // Clean up styles for better reading
-      const style = document.createElement('style');
-      style.textContent = \`
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-          line-height: 1.6 !important;
-          color: #333 !important;
-          background: #fff !important;
-          padding: 16px !important;
-          margin: 0 !important;
-        }
-        * {
-          max-width: 100% !important;
-          box-sizing: border-box !important;
-        }
-        img {
-          height: auto !important;
-          display: block !important;
-          margin: 16px auto !important;
-        }
-        p, div, span {
-          font-size: 16px !important;
-          line-height: 1.6 !important;
-        }
-        h1, h2, h3, h4, h5, h6 {
-          color: #1a1a1a !important;
-          margin: 24px 0 16px 0 !important;
-        }
-        a {
-          color: #007AFF !important;
-          text-decoration: none !important;
-          pointer-events: none !important;
-        }
-        video, iframe, embed, object {
-          display: none !important;
-        }
-      \`;
-      document.head.appendChild(style);
-      
-      // Disable all event listeners
-      window.addEventListener = function() {};
-      document.addEventListener = function() {};
-      
-      true; // Return true to indicate successful execution
     })();
   `;
 
@@ -232,6 +350,12 @@ export default function NewsDetailScreen() {
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color="#ccc" />
         <Text style={styles.errorText}>Article not found</Text>
+        <TouchableOpacity
+          style={styles.errorButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.errorButtonText}>Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -245,12 +369,16 @@ export default function NewsDetailScreen() {
           <TouchableOpacity style={styles.backButton} onPress={handleBackFromWebView}>
             <Ionicons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
-          
+
+          <Text style={styles.webViewTitle} numberOfLines={1}>
+            {news.source?.name || 'Article'}
+          </Text>
+
           <TouchableOpacity style={styles.actionButton} onPress={handleSaveArticle}>
-            <Ionicons 
-              name={isArticleSaved() ? "bookmark" : "bookmark-outline"} 
-              size={24} 
-              color={isArticleSaved() ? "#007AFF" : "#333"} 
+            <Ionicons
+              name={isArticleSaved() ? "bookmark" : "bookmark-outline"}
+              size={24}
+              color={isArticleSaved() ? "#007AFF" : "#333"}
             />
           </TouchableOpacity>
         </View>
@@ -271,12 +399,18 @@ export default function NewsDetailScreen() {
           onError={(syntheticEvent) => {
             const { nativeEvent } = syntheticEvent;
             console.warn('WebView error: ', nativeEvent);
-            Alert.alert('Error', 'Failed to load article content. Please try again.');
+            Alert.alert(
+              'Error',
+              'Failed to load article content. Please try again.',
+              [
+                { text: 'Retry', onPress: () => setShowWebView(false) },
+                { text: 'Go Back', onPress: handleBackFromWebView }
+              ]
+            );
             setWebViewLoading(false);
           }}
           injectedJavaScript={injectedJavaScript}
-          onMessage={() => {}} // Handle messages if needed
-          // javaScriptEnabled={true} // Needed to run the injected script
+          onMessage={() => { }} // Handle messages if needed
           domStorageEnabled={false} // Disable storage
           thirdPartyCookiesEnabled={false} // Disable third-party cookies
           sharedCookiesEnabled={false} // Disable shared cookies
@@ -296,7 +430,7 @@ export default function NewsDetailScreen() {
     );
   }
 
-  // Main Article Screen (unchanged)
+  // Main Article Screen
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -306,12 +440,12 @@ export default function NewsDetailScreen() {
         </TouchableOpacity>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.actionButton} onPress={handleSaveArticle}>
-            <Ionicons 
-              name={isArticleSaved() ? "bookmark" : "bookmark-outline"} 
-              size={24} 
-              color={isArticleSaved() ? "#007AFF" : "#333"} 
+            <Ionicons
+              name={isArticleSaved() ? "bookmark" : "bookmark-outline"}
+              size={24}
+              color={isArticleSaved() ? "#007AFF" : "#333"}
             />
-         </TouchableOpacity>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
             <Ionicons name="share-outline" size={24} color="#333" />
           </TouchableOpacity>
@@ -321,48 +455,60 @@ export default function NewsDetailScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Article Image */}
         {news.urlToImage && (
-          <Image source={{ uri: news.urlToImage }} style={styles.articleImage} />
+          <Image
+            source={{ uri: news.urlToImage }}
+            style={styles.articleImage}
+            defaultSource={{ uri: 'https://via.placeholder.com/400x250?text=Loading' }}
+            onError={() => console.log('Image failed to load:', news.urlToImage)}
+          />
         )}
 
         {/* Article Content */}
         <View style={styles.articleContent}>
-          {/* Category & Date */}
-          <View style={styles.metaInfo}>
-            <View style={styles.categoryContainer}>
-              <Text style={styles.category}>Crypto News</Text>
-            </View>
-            <Text style={styles.timeAgo}>{getTimeAgo(news.publishedAt)}</Text>
-          </View>
-
+          
           {/* Title */}
           <Text style={styles.title}>{news.title}</Text>
 
           {/* Author & Date */}
           <View style={styles.authorInfo}>
-            <Text style={styles.source}>{news.source.name}</Text>
-            <Text style={styles.date}>{formatDate(news.publishedAt)}</Text>
+            <Text style={styles.source}>{news.source?.name || 'Unknown Source'}</Text>
+            <Text style={styles.timeAgo}>{getTimeAgo(news.publishedAt)}</Text>
           </View>
 
           {/* Description */}
-          <Text style={styles.description}>{news.description}</Text>
+          {news.description && (
+            <Text style={styles.description}>{news.description}</Text>
+          )}
 
           {/* Read Full Article Button */}
-          <TouchableOpacity style={styles.readMoreButton} onPress={handleReadFullArticle}>
-            <Text style={styles.readMoreText}>Read Full Article</Text>
-            <Ionicons name="chevron-forward" size={16} color="#007AFF" style={styles.readMoreIcon} />
-          </TouchableOpacity>
+          {news.url && (
+            <TouchableOpacity style={styles.readMoreButton} onPress={handleReadFullArticle}>
+              <Text style={styles.readMoreText}>Read Full Article</Text>
+              <Ionicons name="chevron-forward" size={16} color="#007AFF" style={styles.readMoreIcon} />
+            </TouchableOpacity>
+          )}
 
           {/* Related News */}
           {relatedNews.length > 0 && (
             <View style={styles.relatedSection}>
               <Text style={styles.relatedTitle}>Related News</Text>
-              {relatedNews.map((item) => (
+              {relatedNews.map((item, index) => (
                 <TouchableOpacity
-                  key={item.id}
+                  key={item.id || index}
                   style={styles.relatedItem}
-                  onPress={() => router.push(`/news/${item.id}` as any)}
+                  onPress={() => {
+                    const relatedId = item.id?.toString() ||
+                      `related_${index}_${Date.now()}`;
+                    router.push(`/news/${relatedId}` as any);
+                  }}
                 >
-                  <Image source={{ uri: item.urlToImage }} style={styles.relatedImage} />
+                  {item.urlToImage && (
+                    <Image
+                      source={{ uri: item.urlToImage }}
+                      style={styles.relatedImage}
+                      defaultSource={{ uri: 'https://via.placeholder.com/80x80?text=No+Image' }}
+                    />
+                  )}
                   <View style={styles.relatedContent}>
                     <Text style={styles.relatedItemTitle} numberOfLines={2}>
                       {item.title}
@@ -528,6 +674,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#007AFF',
   },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  errorButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  errorButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   readMoreIcon: {
     marginLeft: 8,
   },
@@ -571,12 +736,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 8,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
+
   errorText: {
     fontSize: 16,
     color: '#666',

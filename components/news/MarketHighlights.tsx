@@ -1,4 +1,4 @@
-// components/MarketHighlights.tsx
+// components/MarketHighlights.tsx - Fixed version
 import React, { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { NewsItem } from '../../types';
@@ -9,30 +9,60 @@ interface MarketHighlightsProps {
 }
 
 const MarketHighlights: React.FC<MarketHighlightsProps> = ({ news }) => {
-    // Sort news to prioritize Cryptews articles first
     const sortedNews = useMemo(() => {
         if (news.length === 0) return [];
-        
-        // Separate Cryptews news from other news
-        const cryptewsNews = news.filter(item => 
-            item.source.name === 'Cryptews' || 
-            item.source.name==='Cryptews'
+       
+        const isCryptews = (item: NewsItem): boolean => {
+            const sourceName = item.source.name.toLowerCase().trim();
+            return sourceName === 'cryptews' || sourceName.includes('cryptews');
+        };
+
+        const getPublishTime = (item: NewsItem): number => {
+            try {
+                return new Date(item.publishedAt).getTime();
+            } catch {
+                return 0; // Fallback for invalid dates
+            }
+        };
+       
+        const cryptewsNews = news.filter(isCryptews);
+        const otherNews = news.filter(item => !isCryptews(item));
+       
+        // Sort each group by publication time (newest first)
+        const sortedCryptewsNews = cryptewsNews.sort((a, b) => 
+            getPublishTime(b) - getPublishTime(a)
         );
         
-        const otherNews = news.filter(item => 
-            item.source.name !== 'Cryptews' && 
-            !item.source.name.toLowerCase().includes('Cryptews')
+        const sortedOtherNews = otherNews.sort((a, b) => 
+            getPublishTime(b) - getPublishTime(a)
         );
+       
+        const result = [...sortedCryptewsNews, ...sortedOtherNews];
         
-        // Return Cryptews news first, then other news
-        return [...cryptewsNews, ...otherNews];
+        if (__DEV__) {
+            console.log('🎯 MarketHighlights sorting:');
+            console.log(`Total items: ${news.length}`);
+            console.log(`Cryptews items: ${cryptewsNews.length}`);
+            console.log(`Other items: ${otherNews.length}`);
+            console.log('First 3 items after sorting:', result.slice(0, 3).map(item => ({
+                title: item.title.substring(0, 50) + '...',
+                source: item.source.name,
+                publishedAt: item.publishedAt,
+                isCryptews: isCryptews(item)
+            })));
+        }
+        
+        return result;
     }, [news]);
 
-    const renderHorizontalNewsItem = useCallback(({ item }: { item: NewsItem }) => {
-        return <MarketNewsItem item={item} isHorizontal={true} />;
+    const renderHorizontalNewsItem = useCallback(({ item, index }: { item: NewsItem; index: number }) => {
+        return <MarketNewsItem item={item} isHorizontal={true} index={index} />;
     }, []);
 
-    const keyExtractor = useCallback((item: NewsItem) => item.id.toString(), []);
+    const keyExtractor = useCallback((item: NewsItem, index: number) => {
+        // More robust key generation
+        return item.id ? item.id.toString() : `${item.url || item.title}-${index}`;
+    }, []);
 
     if (sortedNews.length === 0) {
         return null;
@@ -42,6 +72,7 @@ const MarketHighlights: React.FC<MarketHighlightsProps> = ({ news }) => {
         <View style={styles.highlightsSection}>
             <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Featured</Text>
+                
             </View>
             <FlatList
                 data={sortedNews}
@@ -50,6 +81,10 @@ const MarketHighlights: React.FC<MarketHighlightsProps> = ({ news }) => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.highlightsList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={10}
+                initialNumToRender={5}
             />
         </View>
     );
@@ -71,9 +106,14 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#1A1A1A',
     },
+    debugText: {
+        fontSize: 12,
+        color: '#666',
+        fontStyle: 'italic',
+    },
     highlightsList: {
         paddingLeft: 20,
-        paddingBottom: 10
+        paddingBottom: 10,
     },
 });
 
