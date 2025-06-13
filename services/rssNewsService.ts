@@ -37,8 +37,8 @@ class RSSNewsService {
     // Direct RSS feed URLs
     private readonly RSS_FEEDS: RSSFeed[] = [
     {
-        url: 'https://icogemhunters.com/category/ico-blog/feed/',
-        name: 'ICO Gem Hunters',
+        url: 'http://nxtechnp.com/cryptews/featured.xml',
+        name: 'Cryptews',
         category: 'general'
     },
     {

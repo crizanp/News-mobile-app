@@ -1,9 +1,10 @@
-// screens/MarketScreen.tsx - Updated for unlimited XML RSS feeds
+// screens/MarketScreen.tsx - Updated with Back to Top functionality
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
     Alert,
+    Animated,
     FlatList,
     RefreshControl,
     StyleSheet,
@@ -37,7 +38,10 @@ export default function MarketScreen() {
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [debugInfo, setDebugInfo] = useState<string>('Initializing...');
+    const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
     const hasInitialData = useRef<boolean>(false);
+    const flatListRef = useRef<FlatList>(null);
+    const backToTopOpacity = useRef(new Animated.Value(0)).current;
 
     const fetchMarketNews = async (forceRefresh: boolean = false): Promise<void> => {
         try {
@@ -107,6 +111,32 @@ export default function MarketScreen() {
     const handleCategorySelect = useCallback((categoryId: string) => {
         console.log('🏷️ Category selected:', categoryId);
         setSelectedCategory(categoryId);
+        // Reset scroll position when category changes
+        if (flatListRef.current) {
+            flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+        }
+    }, []);
+
+    // Handle scroll events for back to top button
+    const handleScroll = useCallback((event: any) => {
+        const scrollY = event.nativeEvent.contentOffset.y;
+        const shouldShow = scrollY > 300; // Show after scrolling 300px
+
+        if (shouldShow !== showBackToTop) {
+            setShowBackToTop(shouldShow);
+            Animated.timing(backToTopOpacity, {
+                toValue: shouldShow ? 1 : 0,
+                duration: 200,
+                useNativeDriver: true,
+            }).start();
+        }
+    }, [showBackToTop, backToTopOpacity]);
+
+    // Scroll to top function
+    const scrollToTop = useCallback(() => {
+        if (flatListRef.current) {
+            flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+        }
     }, []);
 
     // Fetch data on first focus
@@ -285,6 +315,7 @@ export default function MarketScreen() {
             </View>
 
             <FlatList
+                ref={flatListRef}
                 style={styles.content}
                 refreshControl={
                     <RefreshControl
@@ -300,6 +331,8 @@ export default function MarketScreen() {
                 windowSize={15}
                 initialNumToRender={8}
                 updateCellsBatchingPeriod={100}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
                 data={[{ type: 'content' }]}
                 renderItem={() => (
                     <>
@@ -315,12 +348,37 @@ export default function MarketScreen() {
 
                         {/* All filtered news */}
                         <NewsList news={regularNews} />
-
-
                     </>
                 )}
                 keyExtractor={() => 'content'}
             />
+
+            {/* Back to Top Button */}
+            <Animated.View
+                style={[
+                    styles.backToTopButton,
+                    {
+                        opacity: backToTopOpacity,
+                        transform: [
+                            {
+                                scale: backToTopOpacity.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [0.8, 1],
+                                }),
+                            },
+                        ],
+                    },
+                ]}
+                pointerEvents={showBackToTop ? 'auto' : 'none'}
+            >
+                <TouchableOpacity
+                    style={styles.backToTopTouchable}
+                    onPress={scrollToTop}
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name="chevron-up" size={24} color="#FFF" />
+                </TouchableOpacity>
+            </Animated.View>
         </View>
     );
 }
@@ -395,5 +453,26 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#666',
         fontFamily: 'monospace',
+    },
+    backToTopButton: {
+        position: 'absolute',
+        bottom: 30,
+        right: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 4,
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    backToTopTouchable: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#007AFF',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });

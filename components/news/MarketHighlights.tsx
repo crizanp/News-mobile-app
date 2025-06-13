@@ -1,6 +1,5 @@
 // components/MarketHighlights.tsx
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { NewsItem } from '../../types';
 import MarketNewsItem from './MarketNewsItem';
@@ -10,24 +9,42 @@ interface MarketHighlightsProps {
 }
 
 const MarketHighlights: React.FC<MarketHighlightsProps> = ({ news }) => {
-    const renderHorizontalNewsItem = useCallback(({ item }: { item: NewsItem }) => (
-        <MarketNewsItem item={item} isHorizontal={true} />
-    ), []);
+    // Sort news to prioritize Cryptews articles first
+    const sortedNews = useMemo(() => {
+        if (news.length === 0) return [];
+        
+        // Separate Cryptews news from other news
+        const cryptewsNews = news.filter(item => 
+            item.source.name === 'Cryptews' || 
+            item.source.name==='Cryptews'
+        );
+        
+        const otherNews = news.filter(item => 
+            item.source.name !== 'Cryptews' && 
+            !item.source.name.toLowerCase().includes('Cryptews')
+        );
+        
+        // Return Cryptews news first, then other news
+        return [...cryptewsNews, ...otherNews];
+    }, [news]);
+
+    const renderHorizontalNewsItem = useCallback(({ item }: { item: NewsItem }) => {
+        return <MarketNewsItem item={item} isHorizontal={true} />;
+    }, []);
 
     const keyExtractor = useCallback((item: NewsItem) => item.id.toString(), []);
 
-    if (news.length === 0) {
+    if (sortedNews.length === 0) {
         return null;
     }
 
     return (
         <View style={styles.highlightsSection}>
             <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Market Highlights</Text>
-                <Ionicons name="trending-up" size={20} color="#007AFF" />
+                <Text style={styles.sectionTitle}>Featured</Text>
             </View>
             <FlatList
-                data={news}
+                data={sortedNews}
                 renderItem={renderHorizontalNewsItem}
                 keyExtractor={keyExtractor}
                 horizontal
@@ -56,6 +73,7 @@ const styles = StyleSheet.create({
     },
     highlightsList: {
         paddingLeft: 20,
+        paddingBottom: 10
     },
 });
 
