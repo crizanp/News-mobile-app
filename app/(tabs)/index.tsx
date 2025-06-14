@@ -340,7 +340,6 @@ export default function MarketScreen() {
     // Memoized filtered data
     const filteredNews = useMemo(() => {
         const result = filterNewsByCategory(allNews, selectedCategory);
-        // Only log when there's a significant change
         if (__DEV__ && result.length > 0 && result.length % 50 === 0) {
             console.log(`📊 Filtered news: ${result.length} items`);
         }
@@ -651,21 +650,16 @@ const styles = StyleSheet.create({
     backToTopButton: {
         position: 'absolute',
         bottom: 30,
-        right: 20,
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        right: 15,
+        
         elevation: 8,
+
     },
     backToTopTouchable: {
-        width: 50,
-        height: 50,
+        width: 45,
+        height: 45,
         borderRadius: 25,
-        backgroundColor: '#007AFF',
+        backgroundColor: 'rgba(0, 0, 0, 0.59)',
         justifyContent: 'center',
         alignItems: 'center',
     },

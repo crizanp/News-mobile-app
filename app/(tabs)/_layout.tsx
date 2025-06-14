@@ -45,12 +45,12 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="portfolio"
+          name="saved"
           options={{
-            title: 'Portfolio',
+            title: 'Saved',
             headerShown: false,
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="pie-chart-outline" size={size} color={color} />
+              <Ionicons name="bookmark-outline" size={size} color={color} />
             ),
           }}
         />

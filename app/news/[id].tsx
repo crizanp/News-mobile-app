@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { rssNewsService } from '../../services/rssNewsService'; // Updated import
+import { useSaveArticle } from '../../hooks/useSaveArticle'; // New import
+import { rssNewsService } from '../../services/rssNewsService';
 import { NewsItem as NewsItemType } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -27,13 +28,26 @@ export default function NewsDetailScreen() {
   const [relatedNews, setRelatedNews] = useState<NewsItemType[]>([]);
   const [showWebView, setShowWebView] = useState<boolean>(false);
   const [webViewLoading, setWebViewLoading] = useState<boolean>(false);
-  const [savedArticles, setSavedArticles] = useState<string[]>([]);
+
+  // Use the save article hook
+  const {
+    isArticleSaved,
+    isSaving,
+    toggleSaveArticle,
+    refreshSavedStatus,
+  } = useSaveArticle(news);
 
   useEffect(() => {
     console.log('NewsDetailScreen mounted with ID:', id);
     fetchNewsDetail();
-    loadSavedArticles();
   }, [id]);
+
+  // Refresh saved status when news changes
+  useEffect(() => {
+    if (news) {
+      refreshSavedStatus();
+    }
+  }, [news, refreshSavedStatus]);
 
   const fetchNewsDetail = async (): Promise<void> => {
     try {
@@ -102,34 +116,6 @@ export default function NewsDetailScreen() {
         const related = [...sameSourceNews, ...otherNews].slice(0, 3);
         setRelatedNews(related);
       }
-
-      // Replace the getTimeAgo function (around line 160-180)
-      const getTimeAgo = (dateString: string): string => {
-        try {
-          const now = new Date();
-          const date = new Date(dateString);
-
-          if (isNaN(date.getTime())) {
-            return 'Recently';
-          }
-
-          const diffTime = now.getTime() - date.getTime(); // Remove Math.abs to get proper direction
-          const diffMinutes = Math.floor(diffTime / (1000 * 60));
-          const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)); // Use Math.floor instead of Math.ceil
-
-          if (diffTime < 0) return 'Recently'; // Future date
-          if (diffMinutes < 1) return 'Just now';
-          if (diffMinutes < 60) return `${diffMinutes}m ago`;
-          if (diffHours < 24) return `${diffHours}h ago`;
-          if (diffDays === 1) return '1 day ago';
-          if (diffDays < 7) return `${diffDays} days ago`;
-          if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-          return `${Math.floor(diffDays / 30)} months ago`;
-        } catch (error) {
-          return 'Recently';
-        }
-      };
     } catch (error) {
       console.error('Error fetching news detail:', error);
       Alert.alert(
@@ -143,35 +129,6 @@ export default function NewsDetailScreen() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadSavedArticles = (): void => {
-    // In a real app, you'd load this from AsyncStorage or a database
-    // For now, we'll use in-memory storage
-    setSavedArticles([]);
-  };
-
-  const handleSaveArticle = (): void => {
-    if (!news) return;
-
-    const articleId = news.id?.toString() || news.url || 'unknown';
-    const isCurrentlySaved = savedArticles.includes(articleId);
-
-    if (isCurrentlySaved) {
-      // Remove from saved
-      setSavedArticles(prev => prev.filter(id => id !== articleId));
-      Alert.alert('Removed', 'Article removed from saved items');
-    } else {
-      // Add to saved
-      setSavedArticles(prev => [...prev, articleId]);
-      Alert.alert('Saved', 'Article saved successfully');
-    }
-  };
-
-  const isArticleSaved = (): boolean => {
-    if (!news) return false;
-    const articleId = news.id?.toString() || news.url || 'unknown';
-    return savedArticles.includes(articleId);
   };
 
   const handleShare = async (): Promise<void> => {
@@ -220,33 +177,33 @@ export default function NewsDetailScreen() {
   };
 
   const getTimeAgo = (dateString: string): string => {
-  try {
-    const now = new Date();
-    const date = new Date(dateString);
+    try {
+      const now = new Date();
+      const date = new Date(dateString);
 
-    if (isNaN(date.getTime())) {
+      if (isNaN(date.getTime())) {
+        return 'Recently';
+      }
+
+      const diffTime = now.getTime() - date.getTime();
+      const diffMinutes = Math.floor(diffTime / (1000 * 60));
+      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const diffWeeks = Math.floor(diffDays / 7);
+      const diffMonths = Math.floor(diffDays / 30);
+
+      if (diffTime < 0) return 'Recently';
+      if (diffMinutes < 1) return 'Just now';
+      if (diffMinutes < 60) return `${diffMinutes}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays === 1) return '1 day ago';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      if (diffWeeks < 4) return `${diffWeeks} weeks ago`;
+      return `${diffMonths} months ago`;
+    } catch (error) {
       return 'Recently';
     }
-
-    const diffTime = now.getTime() - date.getTime(); // Remove Math.abs to get proper direction
-    const diffMinutes = Math.floor(diffTime / (1000 * 60));
-    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const diffWeeks = Math.floor(diffDays / 7);
-    const diffMonths = Math.floor(diffDays / 30);
-
-    if (diffTime < 0) return 'Recently'; // Future date
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 1) return '1 day ago';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffWeeks < 4) return `${diffWeeks} weeks ago`;
-    return `${diffMonths} months ago`;
-  } catch (error) {
-    return 'Recently';
-  }
-};
+  };
 
   // Custom JavaScript to disable interactive elements and show only content
   const injectedJavaScript = `
@@ -333,7 +290,7 @@ export default function NewsDetailScreen() {
         window.addEventListener = function() {};
         document.addEventListener = function() {};
         
-        return true; // Return true to indicate successful execution
+        return true;
       } catch (error) {
         console.error('Injected JavaScript error:', error);
         return false;
@@ -374,12 +331,20 @@ export default function NewsDetailScreen() {
             {news.source?.name || 'Article'}
           </Text>
 
-          <TouchableOpacity style={styles.actionButton} onPress={handleSaveArticle}>
-            <Ionicons
-              name={isArticleSaved() ? "bookmark" : "bookmark-outline"}
-              size={24}
-              color={isArticleSaved() ? "#007AFF" : "#333"}
-            />
+          <TouchableOpacity 
+            style={[styles.actionButton, isSaving && styles.actionButtonDisabled]} 
+            onPress={toggleSaveArticle}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <LoadingSpinner size="small" />
+            ) : (
+              <Ionicons
+                name={isArticleSaved ? "bookmark" : "bookmark-outline"}
+                size={24}
+                color={isArticleSaved ? "#007AFF" : "#333"}
+              />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -410,15 +375,15 @@ export default function NewsDetailScreen() {
             setWebViewLoading(false);
           }}
           injectedJavaScript={injectedJavaScript}
-          onMessage={() => { }} // Handle messages if needed
-          domStorageEnabled={false} // Disable storage
-          thirdPartyCookiesEnabled={false} // Disable third-party cookies
-          sharedCookiesEnabled={false} // Disable shared cookies
-          allowsInlineMediaPlayback={false} // Disable inline media
-          mediaPlaybackRequiresUserAction={true} // Require user action for media
-          allowsBackForwardNavigationGestures={false} // Disable navigation gestures
-          allowsLinkPreview={false} // Disable link preview
-          allowsFullscreenVideo={false} // Disable fullscreen video
+          onMessage={() => { }}
+          domStorageEnabled={false}
+          thirdPartyCookiesEnabled={false}
+          sharedCookiesEnabled={false}
+          allowsInlineMediaPlayback={false}
+          mediaPlaybackRequiresUserAction={true}
+          allowsBackForwardNavigationGestures={false}
+          allowsLinkPreview={false}
+          allowsFullscreenVideo={false}
           startInLoadingState={true}
           scalesPageToFit={true}
           scrollEnabled={true}
@@ -439,12 +404,20 @@ export default function NewsDetailScreen() {
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleSaveArticle}>
-            <Ionicons
-              name={isArticleSaved() ? "bookmark" : "bookmark-outline"}
-              size={24}
-              color={isArticleSaved() ? "#007AFF" : "#333"}
-            />
+          <TouchableOpacity 
+            style={[styles.actionButton, isSaving && styles.actionButtonDisabled]} 
+            onPress={toggleSaveArticle}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <LoadingSpinner size="small" />
+            ) : (
+              <Ionicons
+                name={isArticleSaved ? "bookmark" : "bookmark-outline"}
+                size={24}
+                color={isArticleSaved ? "#007AFF" : "#333"}
+              />
+            )}
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
             <Ionicons name="share-outline" size={24} color="#333" />
@@ -580,6 +553,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F0F0',
     marginLeft: 12,
   },
+  actionButtonDisabled: {
+    opacity: 0.6,
+  },
   content: {
     flex: 1,
   },
@@ -605,27 +581,6 @@ const styles = StyleSheet.create({
   articleContent: {
     padding: 20,
   },
-  metaInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  categoryContainer: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  category: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  timeAgo: {
-    fontSize: 14,
-    color: '#666',
-  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -647,7 +602,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
   },
-  date: {
+  timeAgo: {
     fontSize: 14,
     color: '#666',
   },
@@ -673,25 +628,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#007AFF',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  errorButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  errorButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   readMoreIcon: {
     marginLeft: 8,
@@ -736,10 +672,28 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 8,
   },
-
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+  },
   errorText: {
     fontSize: 16,
     color: '#666',
     marginTop: 16,
+  },
+  errorButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  errorButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
