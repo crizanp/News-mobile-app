@@ -1,7 +1,8 @@
-// MarketScreen.tsx - Fixed featured news logic to prioritize Cryptews
+// MarketScreen.tsx - Fixed excessive re-renders and timer type issue
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     Animated,
@@ -32,6 +33,10 @@ const marketCategories: MarketCategory[] = [
     { id: 'regulation', name: 'Regulation', icon: 'shield-outline' },
 ];
 
+// Constants for reload cooldown
+const RELOAD_COOLDOWN_KEY = 'market_screen_reload_cooldown';
+const COOLDOWN_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 export default function MarketScreen() {
     const [allNews, setAllNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
@@ -39,9 +44,101 @@ export default function MarketScreen() {
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [debugInfo, setDebugInfo] = useState<string>('Initializing...');
     const [showBackToTop, setShowBackToTop] = useState<boolean>(false);
+    
+    // Reload cooldown states
+    const [isReloadDisabled, setIsReloadDisabled] = useState<boolean>(false);
+    const [cooldownEndTime, setCooldownEndTime] = useState<number>(0);
+    const [remainingTime, setRemainingTime] = useState<number>(0);
+    
     const hasInitialData = useRef<boolean>(false);
     const flatListRef = useRef<FlatList>(null);
     const backToTopOpacity = useRef(new Animated.Value(0)).current;
+    const cooldownInterval = useRef<number | null>(null);
+    const lastRenderLog = useRef<number>(0);
+
+    // Check cooldown status on component mount
+    useEffect(() => {
+        checkCooldownStatus();
+        return () => {
+            if (cooldownInterval.current) {
+                clearInterval(cooldownInterval.current);
+            }
+        };
+    }, []);
+
+    // Check if reload is still in cooldown
+    const checkCooldownStatus = async () => {
+        try {
+            const storedEndTime = await AsyncStorage.getItem(RELOAD_COOLDOWN_KEY);
+            if (storedEndTime) {
+                const endTime = parseInt(storedEndTime, 10);
+                const now = Date.now();
+                
+                if (now < endTime) {
+                    // Still in cooldown
+                    setIsReloadDisabled(true);
+                    setCooldownEndTime(endTime);
+                    startCooldownTimer(endTime);
+                } else {
+                    // Cooldown expired, clear storage
+                    await AsyncStorage.removeItem(RELOAD_COOLDOWN_KEY);
+                    setIsReloadDisabled(false);
+                    setCooldownEndTime(0);
+                    setRemainingTime(0);
+                }
+            }
+        } catch (error) {
+            console.error('Error checking cooldown status:', error);
+        }
+    };
+
+    // Start cooldown timer
+    const startCooldownTimer = (endTime: number) => {
+        if (cooldownInterval.current) {
+            clearInterval(cooldownInterval.current);
+        }
+
+        cooldownInterval.current = setInterval(() => {
+            const now = Date.now();
+            const remaining = Math.max(0, endTime - now);
+            
+            setRemainingTime(remaining);
+            
+            if (remaining <= 0) {
+                // Cooldown finished
+                setIsReloadDisabled(false);
+                setCooldownEndTime(0);
+                setRemainingTime(0);
+                AsyncStorage.removeItem(RELOAD_COOLDOWN_KEY);
+                
+                if (cooldownInterval.current) {
+                    clearInterval(cooldownInterval.current);
+                    cooldownInterval.current = null;
+                }
+            }
+        }, 1000);
+    };
+
+    // Start reload cooldown
+    const startReloadCooldown = async () => {
+        const endTime = Date.now() + COOLDOWN_DURATION;
+        
+        try {
+            await AsyncStorage.setItem(RELOAD_COOLDOWN_KEY, endTime.toString());
+            setIsReloadDisabled(true);
+            setCooldownEndTime(endTime);
+            startCooldownTimer(endTime);
+        } catch (error) {
+            console.error('Error setting cooldown:', error);
+        }
+    };
+
+    // Format remaining time for display
+    const formatRemainingTime = (timeMs: number): string => {
+        const minutes = Math.floor(timeMs / (60 * 1000));
+        const seconds = Math.floor((timeMs % (60 * 1000)) / 1000);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    };
 
     const fetchMarketNews = async (forceRefresh: boolean = false): Promise<void> => {
         try {
@@ -85,7 +182,7 @@ export default function MarketScreen() {
                 'Network Error',
                 'Failed to fetch market news. Please check your internet connection and try again.',
                 [
-                    { text: 'Force Refresh', onPress: () => fetchMarketNews(true) },
+                    { text: 'Force Refresh', onPress: () => handleForceRefresh() },
                     { text: 'Retry', onPress: () => fetchMarketNews(false) },
                     { text: 'Cancel', style: 'cancel' }
                 ]
@@ -102,11 +199,25 @@ export default function MarketScreen() {
         fetchMarketNews(false); // Regular refresh
     }, []);
 
-    const onForceRefresh = useCallback((): void => {
-        console.log('🔄 Force refresh triggered');
+    const handleForceRefresh = useCallback((): void => {
+        if (isReloadDisabled) {
+            Alert.alert(
+                'Reload Cooldown',
+                `Please wait ${formatRemainingTime(remainingTime)} before reloading again.`,
+                [{ text: 'OK', style: 'default' }]
+            );
+            return;
+        }
+
+        console.log('🔄 Force refresh triggered with cooldown');
         setRefreshing(true);
+        startReloadCooldown(); // Start the 5-minute cooldown
         fetchMarketNews(true); // Force refresh
-    }, []);
+    }, [isReloadDisabled, remainingTime]);
+
+    const onForceRefresh = useCallback((): void => {
+        handleForceRefresh();
+    }, [handleForceRefresh]);
 
     const handleCategorySelect = useCallback((categoryId: string) => {
         console.log('🏷️ Category selected:', categoryId);
@@ -149,11 +260,15 @@ export default function MarketScreen() {
         }, [])
     );
 
-    // Enhanced filter function with more categories
+    // Optimized filter function with stable reference
     const filterNewsByCategory = useCallback((newsItems: NewsItem[], category: string): NewsItem[] => {
-        console.log(`🔍 Filtering ${newsItems.length} items by category: ${category}`);
-
         if (category === 'all') return newsItems;
+
+        // Only log when category or items count changes significantly
+        const shouldLog = __DEV__ && (newsItems.length % 50 === 0 || newsItems.length < 10);
+        if (shouldLog) {
+            console.log(`🔍 Filtering ${newsItems.length} items by category: ${category}`);
+        }
 
         const filtered = newsItems.filter(item => {
             const title = item.title.toLowerCase();
@@ -216,94 +331,113 @@ export default function MarketScreen() {
             }
         });
 
-        console.log(`🔍 Filtered to ${filtered.length} items`);
+        if (shouldLog) {
+            console.log(`🔍 Filtered to ${filtered.length} items`);
+        }
         return filtered;
-    }, []);
+    }, []); // Empty dependency array for stable reference
 
     // Memoized filtered data
     const filteredNews = useMemo(() => {
         const result = filterNewsByCategory(allNews, selectedCategory);
-        console.log(`📊 Filtered news: ${result.length} items`);
+        // Only log when there's a significant change
+        if (__DEV__ && result.length > 0 && result.length % 50 === 0) {
+            console.log(`📊 Filtered news: ${result.length} items`);
+        }
         return result;
     }, [allNews, selectedCategory, filterNewsByCategory]);
 
-    // FIXED: Split filtered news with Cryptews prioritization
-   // Replace the featured news logic in MarketScreen.tsx (around line 186-220)
-// FIXED: Show only latest 1 Cryptews article in featured section
-const { featuredNews, regularNews } = useMemo(() => {
-    if (filteredNews.length === 0) {
-        return { featuredNews: [], regularNews: [] };
-    }
+    // Optimized split filtered news with Cryptews prioritization
+    const { featuredNews, regularNews } = useMemo(() => {
+        if (filteredNews.length === 0) {
+            return { featuredNews: [], regularNews: [] };
+        }
 
-    // Helper function to check if item is from Cryptews (case-insensitive)
-    const isCryptews = (item: NewsItem): boolean => {
-        const sourceName = item.source.name.toLowerCase().trim();
-        return sourceName === 'cryptews' || sourceName.includes('cryptews');
-    };
+        // Helper function to check if item is from Cryptews (case-insensitive)
+        const isCryptews = (item: NewsItem): boolean => {
+            const sourceName = item.source.name.toLowerCase().trim();
+            return sourceName === 'cryptews' || sourceName.includes('cryptews');
+        };
 
-    // Helper function to get publication timestamp
-    const getPublishTime = (item: NewsItem): number => {
-        try {
-            return new Date(item.publishedAt).getTime();
-        } catch {
-            return 0;
+        // Helper function to get publication timestamp
+        const getPublishTime = (item: NewsItem): number => {
+            try {
+                return new Date(item.publishedAt).getTime();
+            } catch {
+                return 0;
+            }
+        };
+
+        // Separate Cryptews and other news
+        const cryptewsNews = filteredNews.filter(isCryptews);
+        const otherNews = filteredNews.filter(item => !isCryptews(item));
+
+        // Sort each group by publication time (newest first)
+        const sortedCryptewsNews = cryptewsNews.sort((a, b) => 
+            getPublishTime(b) - getPublishTime(a)
+        );
+        const sortedOtherNews = otherNews.sort((a, b) => 
+            getPublishTime(b) - getPublishTime(a)
+        );
+
+        // Build featured news: 1 latest Cryptews + 5 from other sources (total 6)
+        const maxFeatured = 6;
+        let featured: NewsItem[] = [];
+        
+        // First, add only the latest 1 Cryptews article if available
+        if (sortedCryptewsNews.length > 0) {
+            featured = [sortedCryptewsNews[0]]; // Only take the first (latest) one
+        }
+        
+        // Then fill remaining slots with other sources (up to 5 more)
+        const remainingSlots = maxFeatured - featured.length;
+        if (remainingSlots > 0) {
+            featured = [...featured, ...sortedOtherNews.slice(0, remainingSlots)];
+        }
+
+        // Regular news: everything not in featured (including other Cryptews articles)
+        const featuredIds = new Set(featured.map(item => item.id || item.url));
+        const regular = filteredNews.filter(item => 
+            !featuredIds.has(item.id || item.url)
+        ).sort((a, b) => getPublishTime(b) - getPublishTime(a));
+
+        return { featuredNews: featured, regularNews: regular };
+    }, [filteredNews]);
+
+    // Debug logging effect (separated from render cycle)
+    useEffect(() => {
+        if (__DEV__ && featuredNews.length > 0) {
+            const isCryptews = (item: NewsItem): boolean => {
+                const sourceName = item.source.name.toLowerCase().trim();
+                return sourceName === 'cryptews' || sourceName.includes('cryptews');
+            };
+
+            console.log(`⭐ Featured: ${featuredNews.length} (${featuredNews.filter(isCryptews).length} Cryptews + ${featuredNews.length - featuredNews.filter(isCryptews).length} others), Regular: ${regularNews.length}`);
+            
+            console.log('🎯 Featured news (1 Cryptews + 5 others = 6 total):');
+            featuredNews.forEach((item, index) => {
+                console.log(`  ${index + 1}. ${isCryptews(item) ? '[CRYPTEWS]' : '[OTHER]'} ${item.source.name}: ${item.title.substring(0, 50)}...`);
+            });
+        }
+    }, [featuredNews, regularNews]);
+
+    // Memoized FlatList data to prevent recreation
+    const flatListData = useMemo(() => [{ type: 'content' }], []);
+
+    // Throttled render logging
+    const logRender = () => {
+        const now = Date.now();
+        if (now - lastRenderLog.current > 2000) { // Only log once per 2 seconds
+            console.log('🏠 Rendering main screen with data');
+            lastRenderLog.current = now;
         }
     };
-
-    // Separate Cryptews and other news
-    const cryptewsNews = filteredNews.filter(isCryptews);
-    const otherNews = filteredNews.filter(item => !isCryptews(item));
-
-    // Sort each group by publication time (newest first)
-    const sortedCryptewsNews = cryptewsNews.sort((a, b) => 
-        getPublishTime(b) - getPublishTime(a)
-    );
-    const sortedOtherNews = otherNews.sort((a, b) => 
-        getPublishTime(b) - getPublishTime(a)
-    );
-
-    // Build featured news: 1 latest Cryptews + 5 from other sources (total 6)
-    const maxFeatured = 6;
-    let featured: NewsItem[] = [];
-    
-    // First, add only the latest 1 Cryptews article if available
-    if (sortedCryptewsNews.length > 0) {
-        featured = [sortedCryptewsNews[0]]; // Only take the first (latest) one
-    }
-    
-    // Then fill remaining slots with other sources (up to 5 more)
-    const remainingSlots = maxFeatured - featured.length;
-    if (remainingSlots > 0) {
-        featured = [...featured, ...sortedOtherNews.slice(0, remainingSlots)];
-    }
-
-    // Regular news: everything not in featured (including other Cryptews articles)
-    const featuredIds = new Set(featured.map(item => item.id || item.url));
-    const regular = filteredNews.filter(item => 
-        !featuredIds.has(item.id || item.url)
-    ).sort((a, b) => getPublishTime(b) - getPublishTime(a));
-
-    console.log(`⭐ Featured: ${featured.length} (${featured.filter(isCryptews).length} Cryptews + ${featured.length - featured.filter(isCryptews).length} others), Regular: ${regular.length}`);
-    
-    // Debug logging
-    if (__DEV__) {
-        console.log('🎯 Featured news (1 Cryptews + 5 others = 6 total):');
-        featured.forEach((item, index) => {
-            console.log(`  ${index + 1}. ${isCryptews(item) ? '[CRYPTEWS]' : '[OTHER]'} ${item.source.name}: ${item.title.substring(0, 50)}...`);
-        });
-    }
-
-    return { featuredNews: featured, regularNews: regular };
-}, [filteredNews]);
-
-   
 
     // Loading state
     if (loading && !refreshing && !hasInitialData.current) {
         console.log('🔄 Showing loading state');
         return (
             <View style={styles.container}>
-                {}
                 <LoadingState />
             </View>
         );
@@ -337,21 +471,34 @@ const { featuredNews, regularNews } = useMemo(() => {
         );
     }
 
-    console.log('🏠 Rendering main screen with data');
+    // Main render with throttled logging
+    logRender();
+    
     return (
         <View style={styles.container}>
-            {/* {debugDisplay} */}
-
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Market News</Text>
                 <View style={styles.headerButtons}>
                     <TouchableOpacity
-                        style={[styles.refreshButton, styles.forceRefreshButton]}
+                        style={[
+                            styles.refreshButton, 
+                            isReloadDisabled ? styles.disabledRefreshButton : styles.enabledRefreshButton
+                        ]}
                         onPress={onForceRefresh}
-                        disabled={refreshing}
+                        disabled={refreshing || isReloadDisabled}
+                        activeOpacity={isReloadDisabled ? 1 : 0.7}
                     >
-                        <Ionicons name="refresh-circle-outline" size={28} color="#FF6B35" />
+                        <Ionicons 
+                            name="refresh-circle-outline" 
+                            size={28} 
+                            color={isReloadDisabled ? '#CCCCCC' : '#00C851'} 
+                        />
+                        {isReloadDisabled && remainingTime > 0 && (
+                            <Text style={styles.cooldownText}>
+                                {formatRemainingTime(remainingTime)}
+                            </Text>
+                        )}
                     </TouchableOpacity>
                 </View>
             </View>
@@ -375,7 +522,7 @@ const { featuredNews, regularNews } = useMemo(() => {
                 updateCellsBatchingPeriod={100}
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
-                data={[{ type: 'content' }]}
+                data={flatListData}
                 renderItem={() => (
                     <>
                         {/* Categories */}
@@ -460,13 +607,20 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
+        minWidth: 40,
+        justifyContent: 'center',
     },
-    forceRefreshButton: {
+    enabledRefreshButton: {
+        backgroundColor: 'rgba(0, 200, 81, 0.1)', // Light green background when enabled
     },
-    forceRefreshText: {
-        fontSize: 20,
-        color: '#FF6B35',
+    disabledRefreshButton: {
+        backgroundColor: 'rgba(204, 204, 204, 0.1)', // Light gray background when disabled
+    },
+    cooldownText: {
+        fontSize: 12,
+        color: '#CCCCCC',
         fontWeight: '600',
+        marginLeft: 4,
     },
     content: {
         flex: 1,
