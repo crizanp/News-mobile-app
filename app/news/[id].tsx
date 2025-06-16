@@ -14,8 +14,9 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { useSaveArticle } from '../../hooks/useSaveArticle'; // New import
+import { useSaveArticle } from '../../hooks/useSaveArticle';
 import { rssNewsService } from '../../services/rssNewsService';
+import { savedArticlesService } from '../../services/savedArticlesService'; // Add this import
 import { NewsItem as NewsItemType } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -28,6 +29,7 @@ export default function NewsDetailScreen() {
   const [relatedNews, setRelatedNews] = useState<NewsItemType[]>([]);
   const [showWebView, setShowWebView] = useState<boolean>(false);
   const [webViewLoading, setWebViewLoading] = useState<boolean>(false);
+  const [isFromSavedArticles, setIsFromSavedArticles] = useState<boolean>(false);
 
   // Use the save article hook
   const {
@@ -53,11 +55,10 @@ export default function NewsDetailScreen() {
     try {
       console.log('Fetching news detail for ID:', id);
 
-      // Get all news from RSS service (same as MarketScreen)
+      // First, try to get from current RSS feed
       const allNews = await rssNewsService.getCryptoNews(0); // 0 = no limit
       console.log('Total news items fetched:', allNews.length);
 
-      // Try different methods to find the news item
       let newsItem: NewsItemType | undefined;
 
       // Method 1: Direct ID match
@@ -89,17 +90,43 @@ export default function NewsDetailScreen() {
         );
       }
 
-      // Method 4: Last resort - take the first item (for testing)
-      if (!newsItem && allNews.length > 0) {
-        console.warn('Could not find specific news item, using first available');
-        newsItem = allNews[0];
+      // NEW: Method 4 - Check saved articles if not found in current feed
+      if (!newsItem && id) {
+        console.log('Not found in current feed, checking saved articles...');
+        try {
+          const savedArticles = await savedArticlesService.getSavedArticles();
+          console.log('Total saved articles:', savedArticles.length);
+
+          const idString = id.toString();
+          
+          // Try to find in saved articles using the same matching logic
+          newsItem = savedArticles.find(item => {
+            // Direct ID match
+            if (item.id?.toString() === idString) return true;
+
+            // URL-based match
+            if (item.url && item.url.replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) === idString) return true;
+
+            // Title-based match
+            const baseString = `${item.title}-${item.publishedAt}`;
+            const generatedId = baseString.replace(/[^a-zA-Z0-9]/g, '').substring(0, 50);
+            return generatedId === idString;
+          });
+
+          if (newsItem) {
+            console.log('Found in saved articles:', newsItem.title);
+            setIsFromSavedArticles(true);
+          }
+        } catch (error) {
+          console.error('Error checking saved articles:', error);
+        }
       }
 
       if (newsItem) {
         console.log('Found news item:', newsItem.title);
         setNews(newsItem);
 
-        // Get related news - prioritize same source, then latest news
+        // Get related news - only from current feed (not from saved articles for related news)
         const sameSourceNews = allNews.filter(item =>
           item.id !== newsItem!.id &&
           item.url !== newsItem!.url &&
@@ -115,6 +142,10 @@ export default function NewsDetailScreen() {
         // Combine same source news first, then other news, limit to 3
         const related = [...sameSourceNews, ...otherNews].slice(0, 3);
         setRelatedNews(related);
+      } else {
+        // If still no news item found, show error
+        console.warn('Could not find news item with ID:', id);
+        setNews(null);
       }
     } catch (error) {
       console.error('Error fetching news detail:', error);
@@ -307,6 +338,9 @@ export default function NewsDetailScreen() {
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color="#ccc" />
         <Text style={styles.errorText}>Article not found</Text>
+        <Text style={styles.errorSubText}>
+          This article may have been removed or is no longer available.
+        </Text>
         <TouchableOpacity
           style={styles.errorButton}
           onPress={() => router.back()}
@@ -329,6 +363,9 @@ export default function NewsDetailScreen() {
 
           <Text style={styles.webViewTitle} numberOfLines={1}>
             {news.source?.name || 'Article'}
+            {isFromSavedArticles && (
+              <Text style={styles.savedBadge}> • Saved</Text>
+            )}
           </Text>
 
           <TouchableOpacity 
@@ -439,6 +476,14 @@ export default function NewsDetailScreen() {
         {/* Article Content */}
         <View style={styles.articleContent}>
           
+          {/* Show saved article badge */}
+          {isFromSavedArticles && (
+            <View style={styles.savedArticleBadge}>
+              <Ionicons name="bookmark" size={16} color="#007AFF" />
+              <Text style={styles.savedArticleText}>Saved Article</Text>
+            </View>
+          )}
+          
           {/* Title */}
           <Text style={styles.title}>{news.title}</Text>
 
@@ -461,7 +506,7 @@ export default function NewsDetailScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Related News */}
+          {/* Related News - Only show if not from saved articles or if there are related articles */}
           {relatedNews.length > 0 && (
             <View style={styles.relatedSection}>
               <Text style={styles.relatedTitle}>Related News</Text>
@@ -539,6 +584,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 16,
   },
+  savedBadge: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
   backButton: {
     padding: 8,
     borderRadius: 20,
@@ -580,6 +630,24 @@ const styles = StyleSheet.create({
   },
   articleContent: {
     padding: 20,
+  },
+  savedArticleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F8FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  savedArticleText: {
+    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#007AFF',
   },
   title: {
     fontSize: 24,
@@ -680,16 +748,25 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
     marginTop: 16,
+    textAlign: 'center',
+  },
+  errorSubText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   errorButton: {
     backgroundColor: '#007AFF',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
-    marginTop: 16,
+    marginTop: 20,
   },
   errorButtonText: {
     color: '#fff',

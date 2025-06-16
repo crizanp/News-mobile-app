@@ -16,9 +16,10 @@
       }
     },
     "android": {
+      "googleServicesFile":"./google-services.json",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/splash-bg.png",
+        "backgroundColor": "#1a1a2e"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.srijanp.CryptoNewsApp"
@@ -33,10 +34,14 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/splash-bg.png",
+          "imageWidth": 300,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#0f0f23",
+          "dark": {
+            "image": "./assets/images/splash-bg.png",
+            "backgroundColor": "#0f0f23"
+          }
         }
       ]
     ],
