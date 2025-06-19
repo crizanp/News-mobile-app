@@ -1,8 +1,26 @@
+// app/(tabs)/_layout.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+// import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 export default function TabLayout() {
+  // const { expoPushToken, notification } = usePushNotifications();
+
+  // // Log the token when it's available
+  // useEffect(() => {
+  //   if (expoPushToken) {
+  //     console.log('✅ Push token in TabLayout:', expoPushToken);
+  //   }
+  // }, [expoPushToken]);
+
+  // // Log when notification is received
+  // useEffect(() => {
+  //   if (notification) {
+  //     console.log('🔔 Notification received in TabLayout:', notification);
+  //   }
+  // }, [notification]);
+
   return (
     <>
       <StatusBar style="dark" />

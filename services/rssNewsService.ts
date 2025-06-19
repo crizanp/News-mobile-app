@@ -118,11 +118,11 @@ class RSSNewsService {
             name: 'CryptoTale',
             category: 'general'
         },
-        {
-            url: 'https://decrypt.co/feed',
-            name: 'Decrypt',
-            category: 'general'
-        },
+        // {
+        //     url: 'https://decrypt.co/feed',
+        //     name: 'Decrypt',
+        //     category: 'general'
+        // },
         {
             url: 'https://bitcoinmagazine.com/.rss/full/',
             name: 'Bitcoin Magazine',

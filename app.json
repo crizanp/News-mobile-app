@@ -8,6 +8,10 @@
     "scheme": "cryptonewsapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "notification": {
+      "vapidPublicKey": "BAEsvaSrsWXeEfd8AsMkOaFiYwARLTWId_c0pS0BF6iFV_uzUdxpzpL9JuO3gVXfINmE-CcLYkHyhmWSVwNbOVI",
+      "serviceWorkerPath": "./expo-service-worker.js"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.srijanp.CryptoNewsApp",
@@ -16,7 +20,7 @@
       }
     },
     "android": {
-      "googleServicesFile":"./google-services.json",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/splash-bg.png",
         "backgroundColor": "#1a1a2e"
@@ -31,6 +35,14 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#007AFF",
+          "defaultChannel": "default"
+        }
+      ],
       [
         "expo-splash-screen",
         {
