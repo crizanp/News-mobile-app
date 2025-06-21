@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "CryptoNewsApp",
+    "slug": "CryptoNewsApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "cryptonewsapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "notification": {
+      "vapidPublicKey": "BAEsvaSrsWXeEfd8AsMkOaFiYwARLTWId_c0pS0BF6iFV_uzUdxpzpL9JuO3gVXfINmE-CcLYkHyhmWSVwNbOVI",
+      "serviceWorkerPath": "./expo-service-worker.js"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.srijanp.CryptoNewsApp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/splash-bg.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.srijanp.CryptoNewsApp"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#007AFF",
+          "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-bg.png",
+          "imageWidth": 300,
+          "resizeMode": "contain",
+          "backgroundColor": "#0f0f23",
+          "dark": {
+            "image": "./assets/images/splash-bg.png",
+            "backgroundColor": "#0f0f23"
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f06eb63d-4d38-4a2f-89fb-4396428f64a3"
+      }
+    }
+  }
+}
