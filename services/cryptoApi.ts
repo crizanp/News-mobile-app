@@ -7,12 +7,28 @@ const CRYPTOCOMPARE_NEWS_URL = 'https://min-api.cryptocompare.com/data/v2/news';
 
 export const cryptoApi = {
   // Get top cryptocurrencies using CryptoCompare API
-  getTopCoins: async (limit: number = 10): Promise<Coin[]> => {
-    try {
-      console.log('Fetching top coins from CryptoCompare API...');
+  getTopCoins: async (limit: number = 10, page: number = 0): Promise<Coin[]> => {
+  try {
+    console.log(`Fetching top coins from CryptoCompare API... Page: ${Math.floor(page/100) + 1}, Limit: ${limit}`);
+    
+    // CryptoCompare API has a maximum limit of 100 per request
+    // For pagination, we need to make multiple requests
+    const maxLimit = 100;
+    const totalCoins = limit;
+    const startPage = Math.floor(page / maxLimit);
+    const coins: Coin[] = [];
+    
+    // Calculate how many API calls we need
+    const numberOfCalls = Math.ceil(totalCoins / maxLimit);
+    
+    for (let i = 0; i < numberOfCalls; i++) {
+      const currentPage = startPage + i;
+      const currentLimit = Math.min(maxLimit, totalCoins - (i * maxLimit));
+      
+      if (currentLimit <= 0) break;
       
       const response = await fetch(
-        `${CRYPTOCOMPARE_BASE_URL}/top/mktcapfull?limit=${limit}&tsym=USD`,
+        `${CRYPTOCOMPARE_BASE_URL}/top/mktcapfull?limit=${currentLimit}&tsym=USD&page=${currentPage}`,
         {
           method: 'GET',
           headers: {
@@ -27,7 +43,6 @@ export const cryptoApi = {
       }
       
       const result = await response.json();
-      console.log('CryptoCompare API response received');
       
       // Transform CryptoCompare data to match our Coin interface
       const transformedCoins: Coin[] = result.Data.map((item: any, index: number) => ({
@@ -37,7 +52,7 @@ export const cryptoApi = {
         image: `https://www.cryptocompare.com${item.CoinInfo.ImageUrl}`,
         current_price: item.RAW?.USD?.PRICE || 0,
         market_cap: item.RAW?.USD?.MKTCAP || 0,
-        market_cap_rank: index + 1,
+        market_cap_rank: (currentPage * maxLimit) + index + 1,
         fully_diluted_valuation: item.RAW?.USD?.MKTCAP || 0,
         total_volume: item.RAW?.USD?.TOTALVOLUME24H || 0,
         high_24h: item.RAW?.USD?.HIGH24HOUR || 0,
@@ -59,12 +74,17 @@ export const cryptoApi = {
         last_updated: new Date().toISOString(),
       }));
       
-      return transformedCoins;
-    } catch (error) {
-      console.error('Error fetching top coins from CryptoCompare:', error);
-      throw error;
+      coins.push(...transformedCoins);
     }
-  },
+    
+    console.log(`CryptoCompare API response received - ${coins.length} coins`);
+    return coins;
+    
+  } catch (error) {
+    console.error('Error fetching top coins from CryptoCompare:', error);
+    throw error;
+  }
+},
 
   // Get trending coins using CryptoCompare's top gainers
   getTrendingCoins: async (): Promise<TrendingCoin[]> => {

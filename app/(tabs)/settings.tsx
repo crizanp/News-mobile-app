@@ -1,8 +1,9 @@
-// app/(tabs)/settings.tsx - Settings Page
+// app/(tabs)/settings.tsx - Enhanced Settings Page
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
   Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Switch,
@@ -21,29 +22,24 @@ const settingsOptions = [
       { id: 'language', title: 'Language', type: 'select', value: 'English', icon: 'language-outline' },
     ]
   },
-  // {
-  //   section: 'Security',
-  //   items: [
-  //     { id: 'biometric', title: 'Biometric Login', type: 'switch', value: false, icon: 'finger-print-outline' },
-  //     { id: 'twoFactor', title: 'Two-Factor Authentication', type: 'switch', value: true, icon: 'shield-checkmark-outline' },
-  //     { id: 'autoLock', title: 'Auto Lock', type: 'select', value: '5 minutes', icon: 'lock-closed-outline' },
-  //   ]
-  // },
+  
+  
   {
-    section: 'Account',
-    items: [
-      { id: 'profile', title: 'Edit Profile', type: 'action', icon: 'person-outline' },
-      { id: 'backup', title: 'Backup & Sync', type: 'action', icon: 'cloud-outline' },
-      { id: 'export', title: 'Export Data', type: 'action', icon: 'download-outline' },
-    ]
-  },
-  {
-    section: 'Support',
+    section: 'Support & Feedback',
     items: [
       { id: 'help', title: 'Help Center', type: 'action', icon: 'help-circle-outline' },
       { id: 'contact', title: 'Contact Support', type: 'action', icon: 'mail-outline' },
       { id: 'feedback', title: 'Send Feedback', type: 'action', icon: 'chatbubble-outline' },
+      { id: 'rateApp', title: 'Rate This App', type: 'action', icon: 'star-outline' },
+    ]
+  },
+  {
+    section: 'Legal & Information',
+    items: [
       { id: 'about', title: 'About', type: 'action', icon: 'information-circle-outline' },
+      { id: 'privacyPolicy', title: 'Privacy Policy', type: 'action', icon: 'shield-outline' },
+      { id: 'disclaimer', title: 'Disclaimer', type: 'action', icon: 'warning-outline' },
+      { id: 'advertisement', title: 'Advertisement Info', type: 'action', icon: 'megaphone-outline' },
     ]
   },
 ];
@@ -61,7 +57,110 @@ export default function SettingsScreen() {
   };
 
   const handleActionPress = (settingId: string, title: string) => {
-    Alert.alert('Settings', `${title} pressed!`);
+    switch (settingId) {
+      case 'about':
+        Alert.alert(
+          'About App',
+          'MyApp v1.0.0\n\nA comprehensive financial management app designed to help you track expenses, manage budgets, and achieve your financial goals.\n\nDeveloped with ❤️ by Our Team\n\n© 2024 MyApp. All rights reserved.',
+          [{ text: 'OK' }]
+        );
+        break;
+      
+      case 'privacyPolicy':
+        Alert.alert(
+          'Privacy Policy',
+          'Your privacy is important to us. We collect and use your information to provide better services while ensuring your data remains secure.\n\nFor detailed information, please visit our website or contact support.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'View Full Policy', onPress: () => openWebLink('https://yourapp.com/privacy') }
+          ]
+        );
+        break;
+      
+      case 'disclaimer':
+        Alert.alert(
+          'Disclaimer',
+          'This app provides financial tracking tools for informational purposes only. It should not be considered as professional financial advice.\n\nPlease consult with qualified financial advisors for investment decisions.',
+          [{ text: 'Understood' }]
+        );
+        break;
+      
+      case 'advertisement':
+        Alert.alert(
+          'Advertisement Information',
+          'This app may display advertisements to support free usage. We use reputable ad networks and do not share your personal data with advertisers.\n\nYou can upgrade to Premium to remove ads.',
+          [
+            { text: 'OK' },
+            { text: 'Upgrade to Premium', onPress: () => handleUpgrade() }
+          ]
+        );
+        break;
+      
+      case 'rateApp':
+        Alert.alert(
+          'Rate This App',
+          'Enjoying the app? Please take a moment to rate us on the App Store. Your feedback helps us improve!',
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Rate App', onPress: () => openAppStore() }
+          ]
+        );
+        break;
+      
+      case 'feedback':
+        Alert.alert(
+          'Send Feedback',
+          'We value your feedback! How would you like to share your thoughts?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Email Us', onPress: () => openEmail() },
+            { text: 'In-App Form', onPress: () => openFeedbackForm() }
+          ]
+        );
+        break;
+      
+      default:
+        Alert.alert('Settings', `${title} pressed!`);
+        break;
+    }
+  };
+
+  const openWebLink = (url: string) => {
+    Linking.openURL(url).catch(err => {
+      Alert.alert('Error', 'Unable to open link');
+    });
+  };
+
+  const openAppStore = () => {
+    // Replace with your actual app store URL
+    const appStoreUrl = 'https://apps.apple.com/app/your-app-id';
+    const playStoreUrl = 'https://play.google.com/store/apps/details?id=your.package.name';
+    
+    Linking.openURL(appStoreUrl).catch(() => {
+      Linking.openURL(playStoreUrl).catch(() => {
+        Alert.alert('Error', 'Unable to open app store');
+      });
+    });
+  };
+
+  const openEmail = () => {
+    const email = 'support@yourapp.com';
+    const subject = 'App Feedback';
+    const body = 'Hi there,\n\nI have some feedback about the app:\n\n';
+    
+    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {
+      Alert.alert('Error', 'Unable to open email client');
+    });
+  };
+
+  const openFeedbackForm = () => {
+    // Navigate to feedback form screen or show modal
+    Alert.alert('Feedback Form', 'This would open an in-app feedback form');
+  };
+
+  const handleUpgrade = () => {
+    // Navigate to premium upgrade screen
+    Alert.alert('Premium Upgrade', 'This would open the premium upgrade screen');
   };
 
   const renderSettingItem = (item: any) => {
@@ -88,7 +187,7 @@ export default function SettingsScreen() {
             style={styles.settingItem}
             onPress={() => handleActionPress(item.id, item.title)}
           >
-                        <View style={styles.settingLeft}>
+            <View style={styles.settingLeft}>
               <Ionicons name={item.icon} size={24} color="#666" />
               <Text style={styles.settingTitle}>{item.title}</Text>
             </View>
@@ -125,6 +224,12 @@ export default function SettingsScreen() {
           {section.items.map(renderSettingItem)}
         </View>
       ))}
+      
+      {/* App Version Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.versionText}>Version 1.0.0</Text>
+        <Text style={styles.copyrightText}>© 2024 MyApp. All rights reserved.</Text>
+      </View>
     </ScrollView>
   );
 }
@@ -169,5 +274,20 @@ const styles = StyleSheet.create({
     marginRight: 5,
     fontSize: 14,
     color: '#666',
+  },
+  footer: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    paddingHorizontal: 20,
+  },
+  versionText: {
+    fontSize: 14,
+    color: '#999',
+    marginBottom: 5,
+  },
+  copyrightText: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
   },
 });
