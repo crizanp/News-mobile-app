@@ -2,6 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface EmptyStateProps {
     title?: string;
@@ -9,6 +10,7 @@ interface EmptyStateProps {
     buttonText?: string;
     onButtonPress?: () => void;
     icon?: string;
+    showButton?: boolean;
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({
@@ -16,15 +18,30 @@ const EmptyState: React.FC<EmptyStateProps> = ({
     message = 'Pull down to load latest market news',
     buttonText = 'Load Market News',
     onButtonPress,
-    icon = 'newspaper-outline'
+    icon = 'newspaper-outline',
+    showButton = true
 }) => {
+    const { theme } = useTheme();
+
     return (
         <View style={styles.emptyStateContainer}>
-            <Ionicons name={icon as any} size={64} color="#ccc" />
-            <Text style={styles.emptyStateTitle}>{title}</Text>
-            <Text style={styles.emptyStateText}>{message}</Text>
-            {onButtonPress && (
-                <TouchableOpacity style={styles.loadButton} onPress={onButtonPress}>
+            <Ionicons 
+                name={icon as any} 
+                size={64} 
+                color={theme.colors.textSecondary} 
+            />
+            <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
+                {title}
+            </Text>
+            <Text style={[styles.emptyStateText, { color: theme.colors.textSecondary }]}>
+                {message}
+            </Text>
+            {showButton && onButtonPress && (
+                <TouchableOpacity 
+                    style={[styles.loadButton, { backgroundColor: theme.colors.primary }]} 
+                    onPress={onButtonPress}
+                    activeOpacity={0.8}
+                >
                     <Text style={styles.loadButtonText}>{buttonText}</Text>
                 </TouchableOpacity>
             )}
@@ -38,26 +55,30 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 100,
         paddingHorizontal: 20,
+        flex: 1,
     },
     emptyStateTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#333',
         marginTop: 16,
         marginBottom: 8,
+        textAlign: 'center',
     },
     emptyStateText: {
         fontSize: 16,
-        color: '#666',
         textAlign: 'center',
         marginBottom: 24,
         lineHeight: 24,
     },
     loadButton: {
-        backgroundColor: '#007AFF',
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 25,
+        shadowColor: '#007AFF',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
     },
     loadButtonText: {
         color: '#FFF',

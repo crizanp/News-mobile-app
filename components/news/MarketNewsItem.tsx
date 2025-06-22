@@ -9,6 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { NewsItem } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -25,6 +26,7 @@ const MarketNewsItem = React.memo<MarketNewsItemProps>(({
     index = 0 
 }) => {
     const router = useRouter();
+    const { theme } = useTheme();
     const [currentTime, setCurrentTime] = useState<number>(Date.now());
 
     // Update current time every minute for real-time updates
@@ -121,6 +123,8 @@ const MarketNewsItem = React.memo<MarketNewsItemProps>(({
         { uri: item.urlToImage } : 
         { uri: 'https://via.placeholder.com/300x200?text=No+Image' };
 
+    const styles = createStyles(theme);
+
     if (isHorizontal) {
         return (
             <TouchableOpacity 
@@ -189,15 +193,15 @@ const MarketNewsItem = React.memo<MarketNewsItemProps>(({
     );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
     horizontalNewsItem: {
         width: width * 0.75,
         height: 160,
         borderRadius: 12,
         marginRight: 15,
-        shadowColor: '#000',
+        shadowColor: theme.colors.shadowColor,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: theme.isDark ? 0.3 : 0.1,
         shadowRadius: 4,
         elevation: 3,
         overflow: 'hidden',
@@ -211,14 +215,14 @@ const styles = StyleSheet.create({
     },
     horizontalOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.45)',
+        backgroundColor: theme.isDark ? 'rgba(0, 0, 0, 0.65)' : 'rgba(0, 0, 0, 0.45)',
         borderRadius: 12,
     },
     sponsoredTag: {
         position: 'absolute',
         top: 12,
         left: 12,
-        backgroundColor: '#FFD700', // Yellow background
+        backgroundColor: '#FFD700', // Keep yellow for visibility in both themes
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 4,
@@ -237,7 +241,7 @@ const styles = StyleSheet.create({
     },
     horizontalNewsSource: {
         fontSize: 12,
-        color: '#E3F2FD',
+        color: theme.isDark ? '#B3E5FC' : '#E3F2FD',
         fontWeight: '600',
         marginBottom: 5,
     },
@@ -250,20 +254,22 @@ const styles = StyleSheet.create({
     },
     horizontalNewsTime: {
         fontSize: 12,
-        color: '#E0E0E0',
+        color: theme.isDark ? '#F5F5F5' : '#E0E0E0',
     },
     compactNewsItem: {
-        backgroundColor: '#FFF',
+        backgroundColor: theme.colors.surface,
         marginHorizontal: 16,
         marginVertical: 6,
         borderRadius: 8,
         flexDirection: 'row',
-        shadowColor: '#000',
+        shadowColor: theme.colors.shadowColor,
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
+        shadowOpacity: theme.isDark ? 0.2 : 0.08,
         shadowRadius: 2,
         elevation: 2,
         overflow: 'hidden',
+        borderWidth: theme.isDark ? 1 : 0,
+        borderColor: theme.colors.border,
     },
     compactNewsImage: {
         width: 120,
@@ -279,7 +285,7 @@ const styles = StyleSheet.create({
     compactNewsTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#1A1A1A',
+        color: theme.colors.text,
         lineHeight: 18,
         marginBottom: 8,
     },
@@ -290,14 +296,14 @@ const styles = StyleSheet.create({
     },
     compactNewsSource: {
         fontSize: 11,
-        color: '#007AFF',
+        color: theme.colors.primary,
         fontWeight: '500',
         flex: 1,
         marginRight: 8,
     },
     compactNewsTime: {
         fontSize: 11,
-        color: '#999',
+        color: theme.colors.textSecondary,
         fontWeight: '400',
     },
 });

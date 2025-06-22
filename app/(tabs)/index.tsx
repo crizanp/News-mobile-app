@@ -1,4 +1,4 @@
-// MarketScreen.tsx - Fixed excessive re-renders and timer type issue
+// MarketScreen.tsx - Updated with Theme Support
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -18,6 +18,7 @@ import EmptyState from '../../components/news/EmptyState';
 import LoadingState from '../../components/news/LoadingState';
 import MarketHighlights from '../../components/news/MarketHighlights';
 import NewsList from '../../components/news/NewsList';
+import { useTheme } from '../../contexts/ThemeContext'; // Add this import
 import { rssNewsService } from '../../services/rssNewsService';
 import { NewsItem } from '../../types';
 
@@ -38,6 +39,8 @@ const RELOAD_COOLDOWN_KEY = 'market_screen_reload_cooldown';
 const COOLDOWN_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 export default function MarketScreen() {
+    const { theme, isDark } = useTheme(); // Add theme context
+    
     const [allNews, setAllNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -55,6 +58,57 @@ export default function MarketScreen() {
     const backToTopOpacity = useRef(new Animated.Value(0)).current;
     const cooldownInterval = useRef<number | null>(null);
     const lastRenderLog = useRef<number>(0);
+
+    // Create dynamic styles based on current theme
+    const dynamicStyles = useMemo(() => StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: theme.colors.background,
+        },
+        header: {
+            backgroundColor: theme.colors.headerBackground,
+            paddingTop: 40,
+            paddingBottom: 15,
+            paddingHorizontal: 20,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            shadowColor: theme.colors.shadowColor,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: isDark ? 0.3 : 0.1,
+            shadowRadius: 4,
+            elevation: 5,
+        },
+        headerTitle: {
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: theme.colors.text,
+        },
+        content: {
+            flex: 1,
+            backgroundColor: theme.colors.surface,
+        },
+        enabledRefreshButton: {
+            backgroundColor: isDark ? 'rgba(10, 132, 255, 0.2)' : 'rgba(0, 200, 81, 0.1)',
+        },
+        disabledRefreshButton: {
+            backgroundColor: isDark ? 'rgba(142, 142, 147, 0.2)' : 'rgba(204, 204, 204, 0.1)',
+        },
+        cooldownText: {
+            fontSize: 12,
+            color: isDark ? '#8E8E93' : '#CCCCCC',
+            fontWeight: '600',
+            marginLeft: 4,
+        },
+        backToTopTouchable: {
+            width: 45,
+            height: 45,
+            borderRadius: 25,
+            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.59)',
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+    }), [theme, isDark]);
 
     // Check cooldown status on component mount
     useEffect(() => {
@@ -436,7 +490,7 @@ export default function MarketScreen() {
     if (loading && !refreshing && !hasInitialData.current) {
         console.log('🔄 Showing loading state');
         return (
-            <View style={styles.container}>
+            <View style={dynamicStyles.container}>
                 <LoadingState />
             </View>
         );
@@ -446,18 +500,18 @@ export default function MarketScreen() {
     if (!hasInitialData.current && !loading) {
         console.log('📭 Showing empty state');
         return (
-            <View style={styles.container}>
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Market News</Text>
+            <View style={dynamicStyles.container}>
+                <View style={dynamicStyles.header}>
+                    <Text style={dynamicStyles.headerTitle}>Market News</Text>
                 </View>
                 <FlatList
-                    style={styles.content}
+                    style={dynamicStyles.content}
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={onRefresh}
-                            colors={['#007AFF']}
-                            tintColor="#007AFF"
+                            colors={[theme.colors.primary]}
+                            tintColor={theme.colors.primary}
                         />
                     }
                     data={[]}
@@ -474,15 +528,15 @@ export default function MarketScreen() {
     logRender();
     
     return (
-        <View style={styles.container}>
+        <View style={dynamicStyles.container}>
             {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Market News</Text>
+            <View style={dynamicStyles.header}>
+                <Text style={dynamicStyles.headerTitle}>Market News</Text>
                 <View style={styles.headerButtons}>
                     <TouchableOpacity
                         style={[
                             styles.refreshButton, 
-                            isReloadDisabled ? styles.disabledRefreshButton : styles.enabledRefreshButton
+                            isReloadDisabled ? dynamicStyles.disabledRefreshButton : dynamicStyles.enabledRefreshButton
                         ]}
                         onPress={onForceRefresh}
                         disabled={refreshing || isReloadDisabled}
@@ -491,10 +545,10 @@ export default function MarketScreen() {
                         <Ionicons 
                             name="refresh-circle-outline" 
                             size={28} 
-                            color={isReloadDisabled ? '#CCCCCC' : '#00C851'} 
+                            color={isReloadDisabled ? (isDark ? '#8E8E93' : '#CCCCCC') : (isDark ? '#0A84FF' : '#00C851')} 
                         />
                         {isReloadDisabled && remainingTime > 0 && (
-                            <Text style={styles.cooldownText}>
+                            <Text style={dynamicStyles.cooldownText}>
                                 {formatRemainingTime(remainingTime)}
                             </Text>
                         )}
@@ -504,13 +558,13 @@ export default function MarketScreen() {
 
             <FlatList
                 ref={flatListRef}
-                style={styles.content}
+                style={dynamicStyles.content}
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
                         onRefresh={onRefresh}
-                        colors={['#007AFF']}
-                        tintColor="#007AFF"
+                        colors={[theme.colors.primary]}
+                        tintColor={theme.colors.primary}
                     />
                 }
                 showsVerticalScrollIndicator={false}
@@ -560,7 +614,7 @@ export default function MarketScreen() {
                 pointerEvents={showBackToTop ? 'auto' : 'none'}
             >
                 <TouchableOpacity
-                    style={styles.backToTopTouchable}
+                    style={dynamicStyles.backToTopTouchable}
                     onPress={scrollToTop}
                     activeOpacity={0.8}
                 >
@@ -571,30 +625,8 @@ export default function MarketScreen() {
     );
 }
 
+// Static styles that don't change with theme
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F8F9FA',
-    },
-    header: {
-        backgroundColor: '#FFF',
-        paddingTop: 40,
-        paddingBottom: 15,
-        paddingHorizontal: 20,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 5,
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
     headerButtons: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -609,58 +641,10 @@ const styles = StyleSheet.create({
         minWidth: 40,
         justifyContent: 'center',
     },
-    enabledRefreshButton: {
-        backgroundColor: 'rgba(0, 200, 81, 0.1)', // Light green background when enabled
-    },
-    disabledRefreshButton: {
-        backgroundColor: 'rgba(204, 204, 204, 0.1)', // Light gray background when disabled
-    },
-    cooldownText: {
-        fontSize: 12,
-        color: '#CCCCCC',
-        fontWeight: '600',
-        marginLeft: 4,
-    },
-    content: {
-        flex: 1,
-    },
-    debugContainer: {
-        backgroundColor: '#FFE4B5',
-        padding: 10,
-        margin: 5,
-        borderRadius: 5,
-    },
-    debugSection: {
-        backgroundColor: '#F0F0F0',
-        padding: 15,
-        margin: 20,
-        borderRadius: 8,
-    },
-    debugTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        color: '#333',
-    },
-    debugText: {
-        fontSize: 12,
-        color: '#666',
-        fontFamily: 'monospace',
-    },
     backToTopButton: {
         position: 'absolute',
         bottom: 30,
         right: 15,
-        
         elevation: 8,
-
-    },
-    backToTopTouchable: {
-        width: 45,
-        height: 45,
-        borderRadius: 25,
-        backgroundColor: 'rgba(0, 0, 0, 0.59)',
-        justifyContent: 'center',
-        alignItems: 'center',
     },
 });

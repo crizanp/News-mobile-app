@@ -1,4 +1,4 @@
-// app/(tabs)/market.tsx - Enhanced Market Page with Watchlist Tab
+// app/(tabs)/market.tsx - Enhanced Market Page with Theme Support
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -20,6 +20,7 @@ import CoinItem from '../../components/CoinItem';
 import SearchHeader from '../../components/SearchHeader';
 import SkeletonLoader from '../../components/SkeletonLoader';
 import SortOptions from '../../components/SortOptions';
+import { useTheme } from '../../contexts/ThemeContext';
 import { cryptoApi } from '../../services/cryptoApi';
 import { Coin } from '../../types';
 
@@ -42,6 +43,7 @@ interface FavoriteCoin {
 }
 
 export default function MarketScreen() {
+  const { theme, isDark } = useTheme();
   const [coins, setCoins] = useState<Coin[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -216,7 +218,9 @@ export default function MarketScreen() {
     if (!hasMoreData) {
       return (
         <View style={styles.footerContainer}>
-          <Text style={styles.footerText}>No more cryptocurrencies to load</Text>
+          <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
+            No more cryptocurrencies to load
+          </Text>
         </View>
       );
     }
@@ -232,7 +236,7 @@ export default function MarketScreen() {
     return (
       <View style={styles.footerContainer}>
         <TouchableOpacity
-          style={styles.loadMoreButton}
+          style={[styles.loadMoreButton, { backgroundColor: theme.colors.primary }]}
           onPress={loadMoreCoins}
         >
           <Text style={styles.loadMoreButtonText}>
@@ -334,13 +338,18 @@ export default function MarketScreen() {
 
     return (
       <TouchableOpacity
-        style={styles.coinItem}
+        style={[styles.coinItem, { 
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border 
+        }]}
         onPress={() => handleCoinPress(coin)}
         activeOpacity={0.7}
       >
         <View style={styles.coinLeft}>
           <View style={styles.rankContainer}>
-            <Text style={styles.rank}>#{coin.market_cap_rank}</Text>
+            <Text style={[styles.rank, { color: theme.colors.textSecondary }]}>
+              #{coin.market_cap_rank}
+            </Text>
           </View>
           
           <Image
@@ -349,10 +358,10 @@ export default function MarketScreen() {
           />
           
           <View style={styles.coinInfo}>
-            <Text style={styles.coinName} numberOfLines={1}>
+            <Text style={[styles.coinName, { color: theme.colors.text }]} numberOfLines={1}>
               {coin.name}
             </Text>
-            <Text style={styles.coinSymbol}>
+            <Text style={[styles.coinSymbol, { color: theme.colors.textSecondary }]}>
               {coin.symbol.toUpperCase()}
             </Text>
           </View>
@@ -360,7 +369,7 @@ export default function MarketScreen() {
 
         <View style={styles.coinRight}>
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>
+            <Text style={[styles.price, { color: theme.colors.text }]}>
               {formatPrice(coin.current_price)}
             </Text>
             <View style={styles.changeContainer}>
@@ -376,7 +385,9 @@ export default function MarketScreen() {
           </View>
 
           <TouchableOpacity
-            style={styles.favoriteButton}
+            style={[styles.favoriteButton, { 
+              backgroundColor: isDark ? '#4A1F1F' : '#FFE5E5' 
+            }]}
             onPress={() => handleRemoveFavorite(coin)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -403,31 +414,46 @@ export default function MarketScreen() {
   };
 
   const renderTabBar = () => (
-    <View style={styles.tabBar}>
+    <View style={[styles.tabBar, { 
+      backgroundColor: theme.colors.surface,
+      borderBottomColor: theme.colors.border 
+    }]}>
       <TouchableOpacity
-        style={[styles.tab, activeTab === 'market' && styles.activeTab]}
+        style={[
+          styles.tab, 
+          activeTab === 'market' && { backgroundColor: isDark ? '#1E3A8A' : '#E3F2FD' }
+        ]}
         onPress={() => handleTabChange('market')}
       >
         <Ionicons 
           name="trending-up" 
           size={20} 
-          color={activeTab === 'market' ? '#007AFF' : '#666'} 
+          color={activeTab === 'market' ? theme.colors.primary : theme.colors.textSecondary} 
         />
-        <Text style={[styles.tabText, activeTab === 'market' && styles.activeTabText]}>
+        <Text style={[
+          styles.tabText, 
+          { color: activeTab === 'market' ? theme.colors.primary : theme.colors.textSecondary }
+        ]}>
           Market
         </Text>
       </TouchableOpacity>
       
       <TouchableOpacity
-        style={[styles.tab, activeTab === 'watchlist' && styles.activeTab]}
+        style={[
+          styles.tab, 
+          activeTab === 'watchlist' && { backgroundColor: isDark ? '#1E3A8A' : '#E3F2FD' }
+        ]}
         onPress={() => handleTabChange('watchlist')}
       >
         <Ionicons 
           name="heart" 
           size={20} 
-          color={activeTab === 'watchlist' ? '#007AFF' : '#666'} 
+          color={activeTab === 'watchlist' ? theme.colors.primary : theme.colors.textSecondary} 
         />
-        <Text style={[styles.tabText, activeTab === 'watchlist' && styles.activeTabText]}>
+        <Text style={[
+          styles.tabText, 
+          { color: activeTab === 'watchlist' ? theme.colors.primary : theme.colors.textSecondary }
+        ]}>
           Watchlist
         </Text>
         {favoriteCoins.length > 0 && (
@@ -448,7 +474,7 @@ export default function MarketScreen() {
   // Show empty state when no data and not loading
   if (!hasInitialData.current && !loading && activeTab === 'market') {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <SearchHeader
           title="Crypto Market"
           subtitle="Pull down to load market data"
@@ -465,15 +491,20 @@ export default function MarketScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#007AFF']}
-              tintColor="#007AFF"
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="trending-up-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>Pull down to refresh and load market data</Text>
-              <TouchableOpacity style={styles.loadButton} onPress={onRefresh}>
+              <Ionicons name="trending-up-outline" size={64} color={theme.colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+                Pull down to refresh and load market data
+              </Text>
+              <TouchableOpacity 
+                style={[styles.loadButton, { backgroundColor: theme.colors.primary }]} 
+                onPress={onRefresh}
+              >
                 <Text style={styles.loadButtonText}>Load Market Data</Text>
               </TouchableOpacity>
             </View>
@@ -484,7 +515,7 @@ export default function MarketScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <SearchHeader
         title={activeTab === 'market' ? 'Crypto Market' : 'Watchlist'}
         subtitle={activeTab === 'market' ? 
@@ -513,8 +544,8 @@ export default function MarketScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#007AFF']}
-            tintColor="#007AFF"
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -525,13 +556,15 @@ export default function MarketScreen() {
         ListEmptyComponent={
           activeTab === 'watchlist' ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="heart-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>No coins in your watchlist yet</Text>
-              <Text style={styles.emptySubText}>
+              <Ionicons name="heart-outline" size={64} color={theme.colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+                No coins in your watchlist yet
+              </Text>
+              <Text style={[styles.emptySubText, { color: theme.colors.textSecondary }]}>
                 Add coins to your watchlist by tapping the heart icon on any coin detail page
               </Text>
               <TouchableOpacity 
-                style={styles.loadButton} 
+                style={[styles.loadButton, { backgroundColor: theme.colors.primary }]} 
                 onPress={() => handleTabChange('market')}
               >
                 <Text style={styles.loadButtonText}>Explore Market</Text>
@@ -539,12 +572,12 @@ export default function MarketScreen() {
             </View>
           ) : searchQuery.trim() ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="search-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>
+              <Ionicons name="search-outline" size={64} color={theme.colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
                 No cryptocurrencies found for "{searchQuery}"
               </Text>
               <TouchableOpacity
-                style={styles.clearButton}
+                style={[styles.clearButton, { backgroundColor: theme.colors.textSecondary }]}
                 onPress={() => setSearchQuery('')}
               >
                 <Text style={styles.clearButtonText}>Clear Search</Text>
@@ -560,15 +593,12 @@ export default function MarketScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   tab: {
     flex: 1,
@@ -581,17 +611,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     position: 'relative',
   },
-  activeTab: {
-    backgroundColor: '#E3F2FD',
-  },
   tabText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
     marginLeft: 8,
-  },
-  activeTabText: {
-    color: '#007AFF',
   },
   badge: {
     position: 'absolute',
@@ -622,7 +645,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 8,
@@ -630,7 +652,6 @@ const styles = StyleSheet.create({
   },
   emptySubText: {
     fontSize: 14,
-    color: '#888',
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
@@ -642,12 +663,10 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
   },
   loadMoreButton: {
-    backgroundColor: '#007AFF',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
@@ -666,7 +685,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   loadButton: {
-    backgroundColor: '#007AFF',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
@@ -682,7 +700,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   clearButton: {
-    backgroundColor: '#6c757d',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
@@ -696,13 +713,11 @@ const styles = StyleSheet.create({
   coinItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -723,7 +738,6 @@ const styles = StyleSheet.create({
   },
   rank: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '500',
   },
   coinIcon: {
@@ -738,12 +752,10 @@ const styles = StyleSheet.create({
   coinName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 2,
   },
   coinSymbol: {
     fontSize: 13,
-    color: '#666',
     fontWeight: '500',
   },
   coinRight: {
@@ -757,7 +769,6 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 2,
   },
   changeContainer: {
@@ -772,6 +783,5 @@ const styles = StyleSheet.create({
   favoriteButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#FFE5E5',
   },
 });

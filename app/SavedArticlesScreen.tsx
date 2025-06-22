@@ -3,16 +3,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import {
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    RefreshControl,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  RefreshControl,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useSavedArticles } from '../hooks/useSaveArticle';

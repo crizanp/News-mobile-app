@@ -1,4 +1,4 @@
-// components/SearchHeader.tsx - Updated to match NewsScreen header style
+// components/SearchHeader.tsx - Updated to match NewsScreen header style with theme support
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
@@ -8,6 +8,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SearchHeaderProps {
     title: string;
@@ -28,6 +29,8 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({
     onSearchChange,
     onSearchClose,
 }) => {
+    const { theme, isDark } = useTheme();
+
     const handleSearchClose = () => {
         onSearchChange('');
         if (onSearchClose) {
@@ -38,27 +41,52 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({
     };
 
     return (
-        <View style={styles.header}>
+        <View style={[styles.header, { 
+            backgroundColor: theme.colors.surface,
+            shadowColor: isDark ? '#000' : '#000',
+        }]}>
             <View style={styles.headerTop}>
                 {!isSearchVisible ? (
                     <>
                         <View style={styles.titleContainer}>
-                            <Text style={styles.headerTitle}>{title}</Text>
-                            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+                            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+                                {title}
+                            </Text>
+                            {subtitle && (
+                                <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+                                    {subtitle}
+                                </Text>
+                            )}
                         </View>
                         <TouchableOpacity
-                            style={styles.searchButton}
+                            style={[styles.searchButton, { 
+                                backgroundColor: isDark ? '#333' : '#F0F0F0',
+                            }]}
                             onPress={onSearchPress}
                         >
-                            <Ionicons name="search-outline" size={24} color="#333" />
+                            <Ionicons 
+                                name="search-outline" 
+                                size={24} 
+                                color={isDark ? '#FFF' : '#333'} 
+                            />
                         </TouchableOpacity>
                     </>
                 ) : (
-                    <View style={styles.searchContainer}>
-                        <Ionicons name="search-outline" size={20} color="#666" style={styles.searchIcon} />
+                    <View style={[styles.searchContainer, { 
+                        backgroundColor: isDark ? '#2A2A2A' : '#F5F5F5',
+                    }]}>
+                        <Ionicons 
+                            name="search-outline" 
+                            size={20} 
+                            color={theme.colors.textSecondary} 
+                            style={styles.searchIcon} 
+                        />
                         <TextInput
-                            style={styles.searchInput}
+                            style={[styles.searchInput, { 
+                                color: theme.colors.text,
+                            }]}
                             placeholder="Search cryptocurrencies..."
+                            placeholderTextColor={theme.colors.textSecondary}
                             value={searchQuery}
                             onChangeText={onSearchChange}
                             autoFocus
@@ -67,7 +95,11 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({
                             style={styles.closeSearchButton}
                             onPress={handleSearchClose}
                         >
-                            <Ionicons name="close-outline" size={20} color="#666" />
+                            <Ionicons 
+                                name="close-outline" 
+                                size={20} 
+                                color={theme.colors.textSecondary} 
+                            />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -78,10 +110,8 @@ const SearchHeader: React.FC<SearchHeaderProps> = ({
 
 const styles = StyleSheet.create({
     header: {
-        backgroundColor: '#FFF',
-        paddingTop: 40,
+        paddingTop: 50,
         paddingBottom: 0,
-        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -100,24 +130,20 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#1A1A1A',
     },
     subtitle: {
         fontSize: 13,
-        color: '#666',
         fontWeight: '500',
         marginTop: 2,
     },
     searchButton: {
         padding: 8,
         borderRadius: 20,
-        backgroundColor: '#F0F0F0',
     },
     searchContainer: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F5F5F5',
         borderRadius: 25,
         paddingHorizontal: 15,
         height: 45,
@@ -128,7 +154,6 @@ const styles = StyleSheet.create({
     searchInput: {
         flex: 1,
         fontSize: 16,
-        color: '#333',
     },
     closeSearchButton: {
         padding: 5,

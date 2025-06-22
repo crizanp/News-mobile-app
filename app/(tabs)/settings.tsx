@@ -1,5 +1,6 @@
-// app/(tabs)/settings.tsx - Enhanced Settings Page
+// app/(tabs)/settings.tsx - Enhanced Settings Page with Theme Support
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -11,49 +12,55 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
-const settingsOptions = [
-  {
-    section: 'Preferences',
-    items: [
-      { id: 'notifications', title: 'Push Notifications', type: 'switch', value: true, icon: 'notifications-outline' },
-      { id: 'darkMode', title: 'Dark Mode', type: 'switch', value: false, icon: 'moon-outline' },
-      { id: 'currency', title: 'Default Currency', type: 'select', value: 'USD', icon: 'card-outline' },
-      { id: 'language', title: 'Language', type: 'select', value: 'English', icon: 'language-outline' },
-    ]
-  },
-  
-  
-  {
-    section: 'Support & Feedback',
-    items: [
-      { id: 'help', title: 'Help Center', type: 'action', icon: 'help-circle-outline' },
-      { id: 'contact', title: 'Contact Support', type: 'action', icon: 'mail-outline' },
-      { id: 'feedback', title: 'Send Feedback', type: 'action', icon: 'chatbubble-outline' },
-      { id: 'rateApp', title: 'Rate This App', type: 'action', icon: 'star-outline' },
-    ]
-  },
-  {
-    section: 'Legal & Information',
-    items: [
-      { id: 'about', title: 'About', type: 'action', icon: 'information-circle-outline' },
-      { id: 'privacyPolicy', title: 'Privacy Policy', type: 'action', icon: 'shield-outline' },
-      { id: 'disclaimer', title: 'Disclaimer', type: 'action', icon: 'warning-outline' },
-      { id: 'advertisement', title: 'Advertisement Info', type: 'action', icon: 'megaphone-outline' },
-    ]
-  },
-];
+import { useTheme } from '../../contexts/ThemeContext'; // Adjust path as needed
 
 export default function SettingsScreen() {
+  const router = useRouter();
+  const { theme, isDark, toggleTheme } = useTheme();
+  
   const [settings, setSettings] = useState<{[key: string]: any}>({
     notifications: true,
-    darkMode: false,
     biometric: false,
     twoFactor: true,
   });
 
+  // Dynamic settings options that reflect current theme state
+  const settingsOptions = [
+    {
+      section: 'Preferences',
+      items: [
+        { id: 'notifications', title: 'Push Notifications', type: 'switch', value: settings.notifications, icon: 'notifications-outline' },
+        { id: 'darkMode', title: 'Dark Mode', type: 'switch', value: isDark, icon: 'moon-outline' },
+        { id: 'currency', title: 'Default Currency', type: 'select', value: 'USD', icon: 'card-outline' },
+        { id: 'language', title: 'Language', type: 'select', value: 'English', icon: 'language-outline' },
+      ]
+    },
+    {
+      section: 'Support & Feedback',
+      items: [
+        { id: 'help', title: 'Help Center', type: 'action', icon: 'help-circle-outline' },
+        { id: 'contact', title: 'Contact Support', type: 'action', icon: 'mail-outline' },
+        { id: 'feedback', title: 'Send Feedback', type: 'action', icon: 'chatbubble-outline' },
+        { id: 'rateApp', title: 'Rate This App', type: 'action', icon: 'star-outline' },
+      ]
+    },
+    {
+      section: 'Legal & Information',
+      items: [
+        { id: 'about', title: 'About', type: 'action', icon: 'information-circle-outline' },
+        { id: 'privacyPolicy', title: 'Privacy Policy', type: 'action', icon: 'shield-outline' },
+        { id: 'disclaimer', title: 'Disclaimer', type: 'action', icon: 'warning-outline' },
+        { id: 'advertisement', title: 'Advertisement Info', type: 'action', icon: 'megaphone-outline' },
+      ]
+    },
+  ];
+
   const handleSwitchChange = (settingId: string, value: boolean) => {
-    setSettings(prev => ({ ...prev, [settingId]: value }));
+    if (settingId === 'darkMode') {
+      toggleTheme(); // Use theme context toggle
+    } else {
+      setSettings(prev => ({ ...prev, [settingId]: value }));
+    }
   };
 
   const handleActionPress = (settingId: string, title: string) => {
@@ -132,7 +139,6 @@ export default function SettingsScreen() {
   };
 
   const openAppStore = () => {
-    // Replace with your actual app store URL
     const appStoreUrl = 'https://apps.apple.com/app/your-app-id';
     const playStoreUrl = 'https://play.google.com/store/apps/details?id=your.package.name';
     
@@ -154,12 +160,10 @@ export default function SettingsScreen() {
   };
 
   const openFeedbackForm = () => {
-    // Navigate to feedback form screen or show modal
     Alert.alert('Feedback Form', 'This would open an in-app feedback form');
   };
 
   const handleUpgrade = () => {
-    // Navigate to premium upgrade screen
     Alert.alert('Premium Upgrade', 'This would open the premium upgrade screen');
   };
 
@@ -167,15 +171,15 @@ export default function SettingsScreen() {
     switch (item.type) {
       case 'switch':
         return (
-          <View key={item.id} style={styles.settingItem}>
+          <View key={item.id} style={[styles.settingItem, { borderColor: theme.colors.border }]}>
             <View style={styles.settingLeft}>
-              <Ionicons name={item.icon} size={24} color="#666" />
-              <Text style={styles.settingTitle}>{item.title}</Text>
+              <Ionicons name={item.icon} size={24} color={theme.colors.textSecondary} />
+              <Text style={[styles.settingTitle, { color: theme.colors.text }]}>{item.title}</Text>
             </View>
             <Switch
-              value={settings[item.id]}
+              value={item.id === 'darkMode' ? isDark : settings[item.id]}
               onValueChange={(value) => handleSwitchChange(item.id, value)}
-              trackColor={{ false: '#E0E0E0', true: '#007AFF' }}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
               thumbColor="#FFF"
             />
           </View>
@@ -184,16 +188,16 @@ export default function SettingsScreen() {
         return (
           <TouchableOpacity
             key={item.id}
-            style={styles.settingItem}
+            style={[styles.settingItem, { borderColor: theme.colors.border }]}
             onPress={() => handleActionPress(item.id, item.title)}
           >
             <View style={styles.settingLeft}>
-              <Ionicons name={item.icon} size={24} color="#666" />
-              <Text style={styles.settingTitle}>{item.title}</Text>
+              <Ionicons name={item.icon} size={24} color={theme.colors.textSecondary} />
+              <Text style={[styles.settingTitle, { color: theme.colors.text }]}>{item.title}</Text>
             </View>
             <View style={styles.settingRight}>
-              <Text style={styles.settingValue}>{item.value}</Text>
-              <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+              <Text style={[styles.settingValue, { color: theme.colors.textSecondary }]}>{item.value}</Text>
+              <Ionicons name="chevron-forward-outline" size={20} color={theme.colors.textSecondary} />
             </View>
           </TouchableOpacity>
         );
@@ -201,14 +205,14 @@ export default function SettingsScreen() {
         return (
           <TouchableOpacity
             key={item.id}
-            style={styles.settingItem}
+            style={[styles.settingItem, { borderColor: theme.colors.border }]}
             onPress={() => handleActionPress(item.id, item.title)}
           >
             <View style={styles.settingLeft}>
-              <Ionicons name={item.icon} size={24} color="#666" />
-              <Text style={styles.settingTitle}>{item.title}</Text>
+              <Ionicons name={item.icon} size={24} color={theme.colors.textSecondary} />
+              <Text style={[styles.settingTitle, { color: theme.colors.text }]}>{item.title}</Text>
             </View>
-            <Ionicons name="chevron-forward-outline" size={20} color="#999" />
+            <Ionicons name="chevron-forward-outline" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         );
       default:
@@ -216,38 +220,96 @@ export default function SettingsScreen() {
     }
   };
 
+  // Create dynamic styles based on current theme
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 50,
+      paddingHorizontal: 20,
+      paddingBottom: 15,
+      backgroundColor: theme.colors.headerBackground,
+      shadowColor: theme.colors.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    backButton: {
+      padding: 8,
+      borderRadius: 20,
+      backgroundColor: theme.colors.surface,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+    },
+    scrollContainer: {
+      flex: 1,
+      backgroundColor: theme.colors.surface,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 10,
+      color: theme.colors.text,
+    },
+    versionText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginBottom: 5,
+    },
+    copyrightText: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+  });
+
   return (
-    <ScrollView style={styles.container}>
-      {settingsOptions.map((section) => (
-        <View key={section.section} style={styles.section}>
-          <Text style={styles.sectionTitle}>{section.section}</Text>
-          {section.items.map(renderSettingItem)}
-        </View>
-      ))}
-      
-      {/* App Version Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.versionText}>Version 1.0.0</Text>
-        <Text style={styles.copyrightText}>© 2024 MyApp. All rights reserved.</Text>
+    <View style={dynamicStyles.container}>
+      {/* Header */}
+      <View style={dynamicStyles.header}>
+        <TouchableOpacity style={dynamicStyles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
+        </TouchableOpacity>
+        <Text style={dynamicStyles.headerTitle}>Settings</Text>
+        <View style={styles.headerSpacer} />
       </View>
-    </ScrollView>
+
+      {/* Settings Content */}
+      <ScrollView style={dynamicStyles.scrollContainer}>
+        {settingsOptions.map((section) => (
+          <View key={section.section} style={styles.section}>
+            <Text style={dynamicStyles.sectionTitle}>{section.section}</Text>
+            {section.items.map(renderSettingItem)}
+          </View>
+        ))}
+        
+        {/* App Version Footer */}
+        <View style={styles.footer}>
+          <Text style={dynamicStyles.versionText}>Version 1.0.0</Text>
+          <Text style={dynamicStyles.copyrightText}>© 2024 MyApp. All rights reserved.</Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
+// Static styles that don't change with theme
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9F9F9',
+  headerSpacer: {
+    width: 40,
   },
   section: {
     marginTop: 30,
     paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#333',
   },
   settingItem: {
     flexDirection: 'row',
@@ -255,7 +317,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderColor: '#E0E0E0',
   },
   settingLeft: {
     flexDirection: 'row',
@@ -264,7 +325,6 @@ const styles = StyleSheet.create({
   settingTitle: {
     marginLeft: 10,
     fontSize: 16,
-    color: '#333',
   },
   settingRight: {
     flexDirection: 'row',
@@ -273,21 +333,10 @@ const styles = StyleSheet.create({
   settingValue: {
     marginRight: 5,
     fontSize: 14,
-    color: '#666',
   },
   footer: {
     alignItems: 'center',
     paddingVertical: 30,
     paddingHorizontal: 20,
-  },
-  versionText: {
-    fontSize: 14,
-    color: '#999',
-    marginBottom: 5,
-  },
-  copyrightText: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
   },
 });

@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { useTheme } from '../../contexts/ThemeContext'; // Add theme context
 import { useSavedArticles } from '../../hooks/useSaveArticle';
 import { SavedArticle } from '../../services/savedArticlesService';
 
@@ -22,6 +23,7 @@ const { width } = Dimensions.get('window');
 
 export default function SavedArticlesScreen() {
   const router = useRouter();
+  const { theme, isDark } = useTheme(); // Add theme context
   const {
     savedArticles,
     isLoading,
@@ -112,9 +114,189 @@ export default function SavedArticlesScreen() {
     }
   }, [exportSavedArticles]);
 
+  // Create dynamic styles based on current theme
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 50,
+      paddingHorizontal: 20,
+      paddingBottom: 15,
+      backgroundColor: theme.colors.headerBackground,
+      shadowColor: theme.colors.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    backButton: {
+      padding: 8,
+      borderRadius: 20,
+      backgroundColor: theme.colors.surface,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+    },
+    headerContent: {
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      backgroundColor: theme.colors.background,
+    },
+    savedCount: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      marginBottom: 12,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    headerActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+      backgroundColor: isDark ? 'rgba(10, 132, 255, 0.2)' : '#F0F8FF',
+    },
+    clearButton: {
+      borderColor: '#FF6B6B',
+      backgroundColor: isDark ? 'rgba(255, 107, 107, 0.2)' : '#FFF0F0',
+    },
+    headerActionText: {
+      marginLeft: 4,
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    clearButtonText: {
+      color: '#FF6B6B',
+    },
+    articleItem: {
+      flexDirection: 'row',
+      padding: 16,
+      backgroundColor: theme.colors.background,
+    },
+    articleImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+      marginRight: 12,
+    },
+    placeholderImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+      marginRight: 12,
+      backgroundColor: theme.colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    articleContent: {
+      flex: 1,
+      justifyContent: 'space-between',
+    },
+    articleTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+      lineHeight: 22,
+      marginBottom: 4,
+    },
+    articleDescription: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: 8,
+    },
+    articleMeta: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
+    articleSource: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    articleDate: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+    },
+    savedTime: {
+      fontSize: 11,
+      color: theme.colors.primary,
+      fontStyle: 'italic',
+    },
+    articleActions: {
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginLeft: 8,
+    },
+    actionButton: {
+      padding: 8,
+      borderRadius: 16,
+      backgroundColor: theme.colors.surface,
+      marginBottom: 8,
+    },
+    separator: {
+      height: 1,
+      backgroundColor: theme.colors.border,
+      marginHorizontal: 20,
+    },
+    emptyListContainer: {
+      flexGrow: 1,
+      backgroundColor: theme.colors.background,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 40,
+      backgroundColor: theme.colors.background,
+    },
+    emptyTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginTop: 20,
+      marginBottom: 12,
+    },
+    emptyDescription: {
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 24,
+      marginBottom: 32,
+    },
+    exploreButton: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    exploreButtonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
+
   const renderArticleItem = useCallback(({ item, index }: { item: SavedArticle; index: number }) => (
     <TouchableOpacity
-      style={styles.articleItem}
+      style={dynamicStyles.articleItem}
       onPress={() => handleArticlePress(item)}
       activeOpacity={0.7}
     >
@@ -122,93 +304,94 @@ export default function SavedArticlesScreen() {
       {item.urlToImage ? (
         <Image
           source={{ uri: item.urlToImage }}
-          style={styles.articleImage}
+          style={dynamicStyles.articleImage}
           defaultSource={{ uri: 'https://via.placeholder.com/120x120?text=No+Image' }}
         />
       ) : (
-        <View style={styles.placeholderImage}>
-          <Ionicons name="image-outline" size={24} color="#ccc" />
+        <View style={dynamicStyles.placeholderImage}>
+          <Ionicons name="image-outline" size={24} color={theme.colors.textSecondary} />
         </View>
       )}
 
       {/* Article Content */}
-      <View style={styles.articleContent}>
-        <Text style={styles.articleTitle} numberOfLines={2}>
+      <View style={dynamicStyles.articleContent}>
+        <Text style={dynamicStyles.articleTitle} numberOfLines={2}>
           {item.title}
         </Text>
         
-        {/* <Text style={styles.articleDescription} numberOfLines={2}>
+        {/* <Text style={dynamicStyles.articleDescription} numberOfLines={2}>
           {item.description || 'No description available'}
         </Text> */}
 
-        <View style={styles.articleMeta}>
-          <Text style={styles.articleSource}>{item.source?.name || 'Unknown Source'}</Text>
-          <Text style={styles.articleDate}>{getTimeAgo(item.publishedAt)}</Text>
+        <View style={dynamicStyles.articleMeta}>
+          <Text style={dynamicStyles.articleSource}>{item.source?.name || 'Unknown Source'}</Text>
+          <Text style={dynamicStyles.articleDate}>{getTimeAgo(item.publishedAt)}</Text>
         </View>
 
+        {/* <Text style={dynamicStyles.savedTime}>{getSavedTimeAgo(item.savedAt)}</Text> */}
       </View>
 
       {/* Article Actions */}
-      <View style={styles.articleActions}>
+      <View style={dynamicStyles.articleActions}>
         <TouchableOpacity
-          style={styles.actionButton}
+          style={dynamicStyles.actionButton}
           onPress={() => handleShareArticle(item)}
         >
-          <Ionicons name="share-outline" size={20} color="#666" />
+          <Ionicons name="share-outline" size={20} color={theme.colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.actionButton}
+          style={dynamicStyles.actionButton}
           onPress={() => handleRemoveArticle(item)}
         >
           <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
-  ), [handleArticlePress, handleShareArticle, handleRemoveArticle, getTimeAgo, getSavedTimeAgo]);
+  ), [handleArticlePress, handleShareArticle, handleRemoveArticle, getTimeAgo, getSavedTimeAgo, dynamicStyles, theme]);
 
   const renderEmptyState = useCallback(() => (
-    <View style={styles.emptyContainer}>
-      <Ionicons name="bookmark-outline" size={80} color="#ccc" />
-      <Text style={styles.emptyTitle}>No Saved Articles</Text>
-      <Text style={styles.emptyDescription}>
+    <View style={dynamicStyles.emptyContainer}>
+      <Ionicons name="bookmark-outline" size={80} color={theme.colors.textSecondary} />
+      <Text style={dynamicStyles.emptyTitle}>No Saved Articles</Text>
+      <Text style={dynamicStyles.emptyDescription}>
         Articles you save will appear here. Start exploring news and save articles you want to read later.
       </Text>
       <TouchableOpacity
-        style={styles.exploreButton}
+        style={dynamicStyles.exploreButton}
         onPress={() => router.back()}
       >
-        <Text style={styles.exploreButtonText}>Explore News</Text>
+        <Text style={dynamicStyles.exploreButtonText}>Explore News</Text>
       </TouchableOpacity>
     </View>
-  ), [router]);
+  ), [router, dynamicStyles, theme]);
 
   const renderHeader = useCallback(() => (
-    <View style={styles.headerContent}>
-      <Text style={styles.savedCount}>
+    <View style={dynamicStyles.headerContent}>
+      <Text style={dynamicStyles.savedCount}>
         {savedArticles.length} saved article{savedArticles.length !== 1 ? 's' : ''}
       </Text>
       
       {savedArticles.length > 0 && (
-        <View style={styles.headerActions}>
+        <View style={dynamicStyles.headerActions}>
           <TouchableOpacity
-            style={styles.headerActionButton}
+            style={dynamicStyles.headerActionButton}
             onPress={handleExportSavedArticles}
           >
-            <Ionicons name="share-outline" size={16} color="#007AFF" />
-            <Text style={styles.headerActionText}>Export</Text>
+            <Ionicons name="share-outline" size={16} color={theme.colors.primary} />
+            <Text style={dynamicStyles.headerActionText}>Export</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[styles.headerActionButton, styles.clearButton]}
+            style={[dynamicStyles.headerActionButton, dynamicStyles.clearButton]}
             onPress={clearAllSavedArticles}
           >
             <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-            <Text style={[styles.headerActionText, styles.clearButtonText]}>Clear All</Text>
+            <Text style={[dynamicStyles.headerActionText, dynamicStyles.clearButtonText]}>Clear All</Text>
           </TouchableOpacity>
         </View>
       )}
     </View>
-  ), [savedArticles.length, handleExportSavedArticles, clearAllSavedArticles]);
+  ), [savedArticles.length, handleExportSavedArticles, clearAllSavedArticles, dynamicStyles, theme]);
 
   const keyExtractor = useCallback((item: SavedArticle, index: number) => 
     item.id?.toString() || item.url || `saved_${index}`, []);
@@ -218,13 +401,13 @@ export default function SavedArticlesScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+      <View style={dynamicStyles.header}>
+        <TouchableOpacity style={dynamicStyles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Saved Articles</Text>
+        <Text style={dynamicStyles.headerTitle}>Saved Articles</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -235,197 +418,25 @@ export default function SavedArticlesScreen() {
         keyExtractor={keyExtractor}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyState}
-        contentContainerStyle={savedArticles.length === 0 ? styles.emptyListContainer : undefined}
+        contentContainerStyle={savedArticles.length === 0 ? dynamicStyles.emptyListContainer : undefined}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
             onRefresh={refreshSavedArticles}
-            colors={['#007AFF']}
-            tintColor="#007AFF"
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
           />
         }
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={() => <View style={dynamicStyles.separator} />}
       />
     </View>
   );
 }
 
+// Static styles that don't change with theme
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
   headerSpacer: {
     width: 40, // Same width as back button to center title
-  },
-  headerContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  savedCount: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 12,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  headerActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    backgroundColor: '#F0F8FF',
-  },
-  clearButton: {
-    borderColor: '#FF6B6B',
-    backgroundColor: '#FFF0F0',
-  },
-  headerActionText: {
-    marginLeft: 4,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  clearButtonText: {
-    color: '#FF6B6B',
-  },
-  articleItem: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#fff',
-  },
-  articleImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  placeholderImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  articleContent: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  articleTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    lineHeight: 22,
-    marginBottom: 4,
-  },
-  articleDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  articleMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  articleSource: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  articleDate: {
-    fontSize: 12,
-    color: '#999',
-  },
-  savedTime: {
-    fontSize: 11,
-    color: '#007AFF',
-    fontStyle: 'italic',
-  },
-  articleActions: {
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  actionButton: {
-    padding: 8,
-    borderRadius: 16,
-    backgroundColor: '#F5F5F5',
-    marginBottom: 8,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#E5E5E5',
-    marginHorizontal: 20,
-  },
-  emptyListContainer: {
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  emptyDescription: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-  },
-  exploreButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  exploreButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

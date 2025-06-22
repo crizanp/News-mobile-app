@@ -1,40 +1,25 @@
-// app/(tabs)/_layout.tsx
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-// import { usePushNotifications } from '../../hooks/usePushNotifications';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function TabLayout() {
-  // const { expoPushToken, notification } = usePushNotifications();
-
-  // // Log the token when it's available
-  // useEffect(() => {
-  //   if (expoPushToken) {
-  //     console.log('✅ Push token in TabLayout:', expoPushToken);
-  //   }
-  // }, [expoPushToken]);
-
-  // // Log when notification is received
-  // useEffect(() => {
-  //   if (notification) {
-  //     console.log('🔔 Notification received in TabLayout:', notification);
-  //   }
-  // }, [notification]);
-
+  const { theme, isDark } = useTheme();
+  
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Tabs
         screenOptions={{
-          tabBarActiveTintColor: '#007AFF',
-          tabBarInactiveTintColor: '#666',
+          tabBarActiveTintColor: theme.colors.primary,
+          tabBarInactiveTintColor: theme.colors.textSecondary,
           tabBarStyle: {
             paddingBottom: 5,
             paddingTop: 5,
             height: 60,
-            backgroundColor: '#fff',
+            backgroundColor: theme.colors.headerBackground,
             borderTopWidth: 1,
-            borderTopColor: '#E5E5E5',
+            borderTopColor: theme.colors.border,
           },
           tabBarLabelStyle: {
             fontSize: 12,

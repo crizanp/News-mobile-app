@@ -1,6 +1,7 @@
 // components/LoadingState.tsx
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface LoadingStateProps {
     message?: string;
@@ -8,6 +9,7 @@ interface LoadingStateProps {
 }
 
 const SkeletonItem: React.FC<{ style?: any }> = ({ style }) => {
+    const { theme, isDark } = useTheme();
     const shimmerAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -37,7 +39,7 @@ const SkeletonItem: React.FC<{ style?: any }> = ({ style }) => {
         <Animated.View
             style={[
                 {
-                    backgroundColor: '#E1E9EE',
+                    backgroundColor: isDark ? '#2A2A2A' : '#E1E9EE',
                     opacity,
                 },
                 style,
@@ -46,67 +48,95 @@ const SkeletonItem: React.FC<{ style?: any }> = ({ style }) => {
     );
 };
 
-const CategorySkeleton: React.FC = () => (
-    <View style={styles.categoryContainer}>
-        <View style={styles.categoryScroll}>
-            {[...Array(6)].map((_, index) => (
-                <SkeletonItem
-                    key={index}
-                    style={[
-                        styles.categoryItem,
-                        index === 0 && styles.firstCategoryItem
-                    ]}
-                />
-            ))}
+const CategorySkeleton: React.FC = () => {
+    const { theme } = useTheme();
+    
+    return (
+        <View style={[styles.categoryContainer, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.categoryScroll}>
+                {[...Array(6)].map((_, index) => (
+                    <SkeletonItem
+                        key={index}
+                        style={[
+                            styles.categoryItem,
+                            index === 0 && styles.firstCategoryItem
+                        ]}
+                    />
+                ))}
+            </View>
         </View>
-    </View>
-);
+    );
+};
 
-const MarketHighlightsSkeleton: React.FC = () => (
-    <View style={styles.highlightsContainer}>
-        <SkeletonItem style={styles.sectionTitle} />
-        <View style={styles.highlightsGrid}>
-            {[...Array(2)].map((_, index) => (
-                <View key={index} style={styles.highlightCard}>
-                    <SkeletonItem style={styles.highlightImage} />
-                    <View style={styles.highlightContent}>
-                        <SkeletonItem style={styles.highlightTitle} />
-                        <SkeletonItem style={styles.highlightSubtitle} />
-                        <View style={styles.highlightMeta}>
-                            <SkeletonItem style={styles.highlightSource} />
-                            <SkeletonItem style={styles.highlightTime} />
+const MarketHighlightsSkeleton: React.FC = () => {
+    const { theme, isDark } = useTheme();
+    
+    return (
+        <View style={[styles.highlightsContainer, { backgroundColor: theme.colors.surface }]}>
+            <SkeletonItem style={styles.sectionTitle} />
+            <View style={styles.highlightsGrid}>
+                {[...Array(2)].map((_, index) => (
+                    <View 
+                        key={index} 
+                        style={[
+                            styles.highlightCard, 
+                            { backgroundColor: isDark ? '#1A1A1A' : '#F8F9FA' }
+                        ]}
+                    >
+                        <SkeletonItem style={styles.highlightImage} />
+                        <View style={styles.highlightContent}>
+                            <SkeletonItem style={styles.highlightTitle} />
+                            <SkeletonItem style={styles.highlightSubtitle} />
+                            <View style={styles.highlightMeta}>
+                                <SkeletonItem style={styles.highlightSource} />
+                                <SkeletonItem style={styles.highlightTime} />
+                            </View>
+                        </View>
+                    </View>
+                ))}
+            </View>
+        </View>
+    );
+};
+
+const NewsListSkeleton: React.FC = () => {
+    const { theme, isDark } = useTheme();
+    
+    return (
+        <View style={[styles.newsContainer, { backgroundColor: theme.colors.surface }]}>
+            <SkeletonItem style={styles.sectionTitle} />
+            {[...Array(8)].map((_, index) => (
+                <View 
+                    key={index} 
+                    style={[
+                        styles.newsItem,
+                        { 
+                            borderBottomColor: isDark ? '#2A2A2A' : '#F0F0F0',
+                        }
+                    ]}
+                >
+                    <SkeletonItem style={styles.newsImage} />
+                    <View style={styles.newsContent}>
+                        <SkeletonItem style={styles.newsTitle} />
+                        <SkeletonItem style={styles.newsSubtitle} />
+                        <View style={styles.newsMeta}>
+                            <SkeletonItem style={styles.newsSource} />
+                            <SkeletonItem style={styles.newsTime} />
                         </View>
                     </View>
                 </View>
             ))}
         </View>
-    </View>
-);
-
-const NewsListSkeleton: React.FC = () => (
-    <View style={styles.newsContainer}>
-        <SkeletonItem style={styles.sectionTitle} />
-        {[...Array(8)].map((_, index) => (
-            <View key={index} style={styles.newsItem}>
-                <SkeletonItem style={styles.newsImage} />
-                <View style={styles.newsContent}>
-                    <SkeletonItem style={styles.newsTitle} />
-                    <SkeletonItem style={styles.newsSubtitle} />
-                    <View style={styles.newsMeta}>
-                        <SkeletonItem style={styles.newsSource} />
-                        <SkeletonItem style={styles.newsTime} />
-                    </View>
-                </View>
-            </View>
-        ))}
-    </View>
-);
+    );
+};
 
 const LoadingState: React.FC<LoadingStateProps> = () => {
+    const { theme } = useTheme();
+    
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             {/* Header Skeleton */}
-            <View style={styles.header}>
+            <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
                 <SkeletonItem style={styles.headerTitle} />
                 <SkeletonItem style={styles.headerButton} />
             </View>
@@ -129,10 +159,8 @@ const LoadingState: React.FC<LoadingStateProps> = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
     },
     header: {
-        backgroundColor: '#FFF',
         paddingTop: 40,
         paddingBottom: 15,
         paddingHorizontal: 20,
@@ -161,7 +189,6 @@ const styles = StyleSheet.create({
     
     // Category Filter Skeleton
     categoryContainer: {
-        backgroundColor: '#FFF',
         paddingVertical: 15,
         marginBottom: 10,
     },
@@ -181,7 +208,6 @@ const styles = StyleSheet.create({
 
     // Market Highlights Skeleton
     highlightsContainer: {
-        backgroundColor: '#FFF',
         marginBottom: 10,
         paddingVertical: 20,
         paddingHorizontal: 20,
@@ -197,7 +223,6 @@ const styles = StyleSheet.create({
     },
     highlightCard: {
         flexDirection: 'row',
-        backgroundColor: '#F8F9FA',
         borderRadius: 12,
         padding: 12,
         marginBottom: 10,
@@ -241,7 +266,6 @@ const styles = StyleSheet.create({
 
     // News List Skeleton
     newsContainer: {
-        backgroundColor: '#FFF',
         paddingVertical: 20,
         paddingHorizontal: 20,
     },
@@ -250,7 +274,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         paddingBottom: 20,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
     },
     newsImage: {
         width: 60,

@@ -1,6 +1,7 @@
 // components/SkeletonLoader.tsx
 import React, { useEffect, useRef } from 'react';
 import { Animated, Dimensions, StyleSheet, View } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -10,6 +11,7 @@ interface SkeletonLoaderProps {
 }
 
 const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count = 10 }) => {
+  const { theme, isDark } = useTheme();
   const shimmerValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -40,11 +42,19 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
     }),
   };
 
+  // Dynamic colors based on theme
+  const skeletonBaseColor = isDark ? '#2A2A2A' : '#E0E0E0';
+  const skeletonHighlightColor = isDark ? '#3A3A3A' : '#F0F0F0';
+
   const SkeletonBox = ({ width, height, style = {} }: { width: number | string; height: number; style?: any }) => (
     <Animated.View
       style={[
-        styles.skeletonBox,
-        { width, height },
+        {
+          backgroundColor: skeletonBaseColor,
+          borderRadius: 8,
+          width,
+          height,
+        },
         shimmerStyle,
         style,
       ]}
@@ -52,15 +62,18 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
   );
 
   const renderMarketSkeleton = () => (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header Skeleton */}
-      <View style={styles.headerSkeleton}>
+      <View style={[styles.headerSkeleton, { 
+        backgroundColor: theme.colors.surface,
+        borderBottomColor: theme.colors.border,
+      }]}>
         {/* <SkeletonBox width={150} height={24} />
         <SkeletonBox width={100} height={16} style={{ marginTop: 8 }} /> */}
       </View>
 
       {/* Sort Options Skeleton */}
-      <View style={styles.sortSkeleton}>
+      <View style={[styles.sortSkeleton, { backgroundColor: theme.colors.surface }]}>
         {[1, 2, 3, 4].map((item) => (
           <SkeletonBox key={item} width={70} height={32} style={{ marginHorizontal: 4 }} />
         ))}
@@ -69,7 +82,11 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
       {/* Coin List Skeleton */}
       <View style={styles.listContainer}>
         {Array.from({ length: count }).map((_, index) => (
-          <View key={index} style={styles.coinItemSkeleton}>
+          <View key={index} style={[styles.coinItemSkeleton, { 
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+            shadowColor: isDark ? '#000' : '#000',
+          }]}>
             <View style={styles.coinLeftSection}>
               <SkeletonBox width={40} height={40} style={styles.coinIcon} />
               <View style={styles.coinInfo}>
@@ -88,16 +105,22 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
   );
 
   const renderCoinDetailSkeleton = () => (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header Skeleton */}
-      <View style={styles.detailHeaderSkeleton}>
+      <View style={[styles.detailHeaderSkeleton, { 
+        backgroundColor: theme.colors.surface,
+        borderBottomColor: theme.colors.border,
+      }]}>
         <SkeletonBox width={24} height={24} style={styles.backButton} />
         <SkeletonBox width={80} height={20} />
         <SkeletonBox width={24} height={24} style={styles.favoriteButton} />
       </View>
 
       {/* Price Section Skeleton */}
-      <View style={styles.priceSectionSkeleton}>
+      <View style={[styles.priceSectionSkeleton, { 
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.border,
+      }]}>
         <View style={styles.priceHeaderSkeleton}>
           <SkeletonBox width={60} height={24} />
           <SkeletonBox width={80} height={16} />
@@ -107,9 +130,14 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
       </View>
 
       {/* Chart Section Skeleton */}
-      <View style={styles.chartSectionSkeleton}>
+      <View style={[styles.chartSectionSkeleton, { 
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.border,
+      }]}>
         {/* Time Range Buttons */}
-        <View style={styles.timeRangeSkeleton}>
+        <View style={[styles.timeRangeSkeleton, { 
+          backgroundColor: isDark ? '#1A1A1A' : '#F8F9FA',
+        }]}>
           {[1, 2, 3, 4].map((item) => (
             <SkeletonBox key={item} width={40} height={32} style={{ marginHorizontal: 4 }} />
           ))}
@@ -121,7 +149,10 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
       {/* Stats Section Skeleton */}
       <View style={styles.statsSectionSkeleton}>
         <SkeletonBox width={140} height={20} style={{ marginBottom: 16 }} />
-        <View style={styles.statsGridSkeleton}>
+        <View style={[styles.statsGridSkeleton, { 
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+        }]}>
           {Array.from({ length: 6 }).map((_, index) => (
             <View key={index} style={styles.statItemSkeleton}>
               <SkeletonBox width={20} height={20} style={styles.statIcon} />
@@ -137,9 +168,14 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
       {/* Info Section Skeleton */}
       <View style={styles.infoSectionSkeleton}>
         <SkeletonBox width={120} height={20} style={{ marginBottom: 16 }} />
-        <View style={styles.infoCardSkeleton}>
+        <View style={[styles.infoCardSkeleton, { 
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+        }]}>
           {[1, 2, 3].map((item) => (
-            <View key={item} style={styles.infoRowSkeleton}>
+            <View key={item} style={[styles.infoRowSkeleton, { 
+              borderBottomColor: theme.colors.border,
+            }]}>
               <SkeletonBox width={100} height={16} />
               <SkeletonBox width={80} height={16} />
             </View>
@@ -150,9 +186,13 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
   );
 
   const renderListSkeleton = () => (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {Array.from({ length: count }).map((_, index) => (
-        <View key={index} style={styles.listItemSkeleton}>
+        <View key={index} style={[styles.listItemSkeleton, { 
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+          shadowColor: isDark ? '#000' : '#000',
+        }]}>
           <SkeletonBox width={40} height={40} style={styles.listIcon} />
           <View style={styles.listContent}>
             <SkeletonBox width="70%" height={16} />
@@ -164,7 +204,10 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
   );
 
   const renderChartSkeleton = () => (
-    <View style={styles.chartContainer}>
+    <View style={[styles.chartContainer, { 
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+    }]}>
       <SkeletonBox width="100%" height={220} style={styles.chartOnly} />
     </View>
   );
@@ -186,26 +229,18 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'market', count 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    marginTop:40
-  },
-  skeletonBox: {
-    backgroundColor: '#e0e0e0',
-    borderRadius: 8,
+    marginTop: 40,
   },
   
   // Market Skeleton Styles
   headerSkeleton: {
     padding: 20,
-    marginTop:30,
-    backgroundColor: '#ffffff',
+    marginTop: 30,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   sortSkeleton: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: '#ffffff',
     justifyContent: 'space-around',
   },
   listContainer: {
@@ -216,12 +251,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     padding: 16,
     marginVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   coinLeftSection: {
     flexDirection: 'row',
@@ -246,9 +283,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   backButton: {
     borderRadius: 12,
@@ -257,12 +292,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   priceSectionSkeleton: {
-    backgroundColor: '#ffffff',
     margin: 16,
     padding: 24,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
   },
   priceHeaderSkeleton: {
     flexDirection: 'row',
@@ -271,19 +304,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chartSectionSkeleton: {
-    backgroundColor: '#ffffff',
     margin: 16,
     marginTop: 0,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
   },
   timeRangeSkeleton: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 20,
-    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 4,
   },
@@ -296,11 +326,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statsGridSkeleton: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
   },
   statItemSkeleton: {
     flexDirection: 'row',
@@ -319,11 +347,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   infoCardSkeleton: {
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
   },
   infoRowSkeleton: {
     flexDirection: 'row',
@@ -331,20 +357,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
 
   // List Skeleton Styles
   listItemSkeleton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     padding: 16,
     marginVertical: 4,
     marginHorizontal: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   listIcon: {
     borderRadius: 20,
@@ -356,12 +383,10 @@ const styles = StyleSheet.create({
 
   // Chart Only Skeleton Styles
   chartContainer: {
-    backgroundColor: '#ffffff',
     padding: 20,
     borderRadius: 16,
     margin: 16,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
   },
   chartOnly: {
     borderRadius: 16,

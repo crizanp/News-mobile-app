@@ -1,13 +1,14 @@
-// components/SortOptions.tsx - Compact Version
+// components/SortOptions.tsx - Enhanced Version with Theme Support
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
-    FlatList,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface SortOption {
   id: string;
@@ -26,14 +27,19 @@ const SortOptions: React.FC<SortOptionsProps> = ({
   selectedSort,
   onSortChange,
 }) => {
+  const { theme, isDark } = useTheme();
+
   const renderSortOption = ({ item }: { item: SortOption }) => {
     const isSelected = selectedSort === item.id;
-    
+        
     return (
       <TouchableOpacity
         style={[
           styles.sortButton,
-          isSelected && styles.sortButtonActive
+          { 
+            backgroundColor: isSelected ? theme.colors.primary : theme.colors.surface,
+            borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+          }
         ]}
         onPress={() => onSortChange(item.id)}
         activeOpacity={0.7}
@@ -41,12 +47,14 @@ const SortOptions: React.FC<SortOptionsProps> = ({
         <Ionicons
           name={item.icon as any}
           size={14}
-          color={isSelected ? '#FFF' : '#666'}
+          color={isSelected ? '#FFF' : theme.colors.textSecondary}
           style={styles.sortIcon}
         />
         <Text style={[
           styles.sortButtonText,
-          isSelected && styles.sortButtonTextActive
+          { 
+            color: isSelected ? '#FFF' : theme.colors.textSecondary 
+          }
         ]}>
           {item.name}
         </Text>
@@ -55,7 +63,13 @@ const SortOptions: React.FC<SortOptionsProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      { 
+        backgroundColor: theme.colors.background,
+        borderBottomColor: theme.colors.border,
+      }
+    ]}>
       <FlatList
         data={options}
         renderItem={renderSortOption}
@@ -70,11 +84,9 @@ const SortOptions: React.FC<SortOptionsProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   sortList: {
     paddingRight: 12,
@@ -86,13 +98,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginRight: 8,
     borderRadius: 16,
-    backgroundColor: '#f8f9fa',
     borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  sortButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sortIcon: {
     marginRight: 4,
@@ -100,10 +111,6 @@ const styles = StyleSheet.create({
   sortButtonText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#666',
-  },
-  sortButtonTextActive: {
-    color: '#FFF',
   },
 });
 

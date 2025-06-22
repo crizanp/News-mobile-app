@@ -2,6 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { NewsItem } from '../../types';
 import MarketNewsItem from './MarketNewsItem';
 
@@ -11,18 +12,45 @@ interface NewsListProps {
 }
 
 const NewsList: React.FC<NewsListProps> = ({ news, title = 'Latest Updates' }) => {
-    const renderVerticalNewsItem = useCallback(({ item }: { item: NewsItem }) => (
-        <MarketNewsItem item={item} isHorizontal={false} />
+    const { theme } = useTheme();
+    
+    const renderVerticalNewsItem = useCallback(({ item, index }: { item: NewsItem; index: number }) => (
+        <MarketNewsItem item={item} isHorizontal={false} index={index} />
     ), []);
-
-    const keyExtractor = useCallback((item: NewsItem) => item.id.toString(), []);
-
+    
+    const keyExtractor = useCallback((item: NewsItem, index: number) => {
+        return item.id ? item.id.toString() : `${item.url || item.title}-${index}`;
+    }, []);
+    
+    // Dynamic styles based on theme
+    const containerStyle = [
+        styles.newsSection,
+        { backgroundColor: theme.colors.background }
+    ];
+    
+    const sectionTitleStyle = [
+        styles.sectionTitle,
+        { color: theme.colors.text }
+    ];
+    
+    const newsCountStyle = [
+        styles.newsCount,
+        { color: theme.colors.textSecondary }
+    ];
+    
+    const emptyTextStyle = [
+        styles.emptyResultsText,
+        { color: theme.colors.textSecondary }
+    ];
+    
+    const emptyIconColor = theme.isDark ? '#555' : '#ccc';
+    
     return (
-        <View style={styles.newsSection}>
+        <View >
             <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{title}</Text>
-                <Text style={styles.newsCount}>
-                    {news.length} articles
+                <Text style={sectionTitleStyle}>{title}</Text>
+                <Text style={newsCountStyle}>
+                    {news.length} article{news.length !== 1 ? 's' : ''}
                 </Text>
             </View>
             {news.length > 0 ? (
@@ -32,12 +60,23 @@ const NewsList: React.FC<NewsListProps> = ({ news, title = 'Latest Updates' }) =
                     keyExtractor={keyExtractor}
                     showsVerticalScrollIndicator={false}
                     scrollEnabled={false}
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={10}
+                    windowSize={10}
+                    initialNumToRender={8}
                 />
             ) : (
                 <View style={styles.emptyResultsContainer}>
-                    <Ionicons name="newspaper-outline" size={48} color="#ccc" />
-                    <Text style={styles.emptyResultsText}>
+                    <Ionicons 
+                        name="newspaper-outline" 
+                        size={48} 
+                        color={emptyIconColor} 
+                    />
+                    <Text style={emptyTextStyle}>
                         No market news available for this category
+                    </Text>
+                    <Text style={[emptyTextStyle, styles.emptySubtext]}>
+                        Try selecting a different category or check back later
                     </Text>
                 </View>
             )}
@@ -59,11 +98,9 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#1A1A1A',
     },
     newsCount: {
         fontSize: 14,
-        color: '#666',
         fontWeight: '500',
     },
     emptyResultsContainer: {
@@ -74,10 +111,16 @@ const styles = StyleSheet.create({
     },
     emptyResultsText: {
         fontSize: 16,
-        color: '#666',
         textAlign: 'center',
         marginTop: 16,
         lineHeight: 24,
+        fontWeight: '500',
+    },
+    emptySubtext: {
+        fontSize: 14,
+        marginTop: 8,
+        opacity: 0.8,
+        fontWeight: '400',
     },
 });
 

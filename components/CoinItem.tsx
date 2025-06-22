@@ -1,7 +1,8 @@
-// components/CoinItem.tsx - Compact Enhanced Version
+// components/CoinItem.tsx - Enhanced Version with Theme Support
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 import { Coin } from '../types';
 
 interface CoinItemProps {
@@ -10,6 +11,8 @@ interface CoinItemProps {
 }
 
 const CoinItem: React.FC<CoinItemProps> = ({ item, onPress }) => {
+  const { theme, isDark } = useTheme();
+
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -25,7 +28,7 @@ const CoinItem: React.FC<CoinItemProps> = ({ item, onPress }) => {
   };
 
   const getPercentageColor = (percentage: number | null): string => {
-    if (percentage === null || percentage === undefined) return '#666';
+    if (percentage === null || percentage === undefined) return theme.colors.textSecondary;
     return percentage > 0 ? '#10B981' : '#EF4444';
   };
 
@@ -57,7 +60,9 @@ const CoinItem: React.FC<CoinItemProps> = ({ item, onPress }) => {
     <>
       <View style={styles.leftSection}>
         <View style={styles.rankContainer}>
-          <Text style={styles.rank}>{item.market_cap_rank}</Text>
+          <Text style={[styles.rank, { color: theme.colors.textSecondary }]}>
+            {item.market_cap_rank}
+          </Text>
         </View>
         
         <View style={styles.coinImageContainer}>
@@ -69,21 +74,33 @@ const CoinItem: React.FC<CoinItemProps> = ({ item, onPress }) => {
         </View>
         
         <View style={styles.coinInfo}>
-          <Text style={styles.coinName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.coinSymbol}>{item.symbol?.toUpperCase()}</Text>
+          <Text style={[styles.coinName, { color: theme.colors.text }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={[styles.coinSymbol, { color: theme.colors.textSecondary }]}>
+            {item.symbol?.toUpperCase()}
+          </Text>
           <View style={styles.marketCapRow}>
-            <Text style={styles.marketCapLabel}>MCap:</Text>
-            <Text style={styles.marketCap}>{formatMarketCap(item.market_cap)}</Text>
+            <Text style={[styles.marketCapLabel, { color: theme.colors.textSecondary }]}>
+              MCap:
+            </Text>
+            <Text style={[styles.marketCap, { color: theme.colors.textSecondary }]}>
+              {formatMarketCap(item.market_cap)}
+            </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.rightSection}>
-        <Text style={styles.price}>{formatPrice(item.current_price)}</Text>
+        <Text style={[styles.price, { color: theme.colors.text }]}>
+          {formatPrice(item.current_price)}
+        </Text>
         
         <View style={[
           styles.percentageContainer,
-          { backgroundColor: getPercentageColor(item.price_change_percentage_24h) + '10' }
+          { 
+            backgroundColor: getPercentageColor(item.price_change_percentage_24h) + (isDark ? '20' : '10')
+          }
         ]}>
           <Ionicons
             name={item.price_change_percentage_24h > 0 ? "trending-up" : "trending-down"}
@@ -101,12 +118,18 @@ const CoinItem: React.FC<CoinItemProps> = ({ item, onPress }) => {
           </Text>
         </View>
         
-        <Text style={styles.volume}>Vol: {formatVolume(item.total_volume)}</Text>
+        <Text style={[styles.volume, { color: theme.colors.textSecondary }]}>
+          Vol: {formatVolume(item.total_volume)}
+        </Text>
       </View>
 
       {onPress && (
         <View style={styles.chevronContainer}>
-          <Ionicons name="chevron-forward" size={16} color="#ccc" />
+          <Ionicons 
+            name="chevron-forward" 
+            size={16} 
+            color={theme.colors.textSecondary} 
+          />
         </View>
       )}
     </>
@@ -115,7 +138,14 @@ const CoinItem: React.FC<CoinItemProps> = ({ item, onPress }) => {
   if (onPress) {
     return (
       <TouchableOpacity 
-        style={styles.container} 
+        style={[
+          styles.container,
+          { 
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+            shadowColor: isDark ? '#000' : '#000',
+          }
+        ]} 
         onPress={onPress}
         activeOpacity={0.7}
       >
@@ -124,12 +154,22 @@ const CoinItem: React.FC<CoinItemProps> = ({ item, onPress }) => {
     );
   }
 
-  return <View style={styles.container}>{Content}</View>;
+  return (
+    <View style={[
+      styles.container,
+      { 
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.border,
+        shadowColor: isDark ? '#000' : '#000',
+      }
+    ]}>
+      {Content}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
     marginHorizontal: 12,
     marginVertical: 3,
     padding: 12,
@@ -137,13 +177,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#f8f9fa',
   },
   leftSection: {
     flexDirection: 'row',
@@ -157,7 +195,6 @@ const styles = StyleSheet.create({
   },
   rank: {
     fontSize: 11,
-    color: '#666',
     fontWeight: '600',
   },
   coinImageContainer: {
@@ -182,12 +219,10 @@ const styles = StyleSheet.create({
   coinName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a1a1a',
     marginBottom: 1,
   },
   coinSymbol: {
     fontSize: 11,
-    color: '#666',
     fontWeight: '500',
     marginBottom: 2,
   },
@@ -197,12 +232,10 @@ const styles = StyleSheet.create({
   },
   marketCapLabel: {
     fontSize: 10,
-    color: '#999',
     marginRight: 3,
   },
   marketCap: {
     fontSize: 10,
-    color: '#666',
     fontWeight: '500',
   },
   rightSection: {
@@ -212,7 +245,6 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a1a1a',
     marginBottom: 3,
   },
   percentageContainer: {
@@ -232,7 +264,6 @@ const styles = StyleSheet.create({
   },
   volume: {
     fontSize: 10,
-    color: '#999',
     fontWeight: '400',
   },
   chevronContainer: {

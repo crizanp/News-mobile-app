@@ -1,6 +1,7 @@
-// components/MarketHighlights.tsx - Fixed version
+// components/MarketHighlights.tsx - Theme-aware version
 import React, { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 import { NewsItem } from '../../types';
 import MarketNewsItem from './MarketNewsItem';
 
@@ -9,6 +10,8 @@ interface MarketHighlightsProps {
 }
 
 const MarketHighlights: React.FC<MarketHighlightsProps> = ({ news }) => {
+    const { theme } = useTheme();
+    
     const sortedNews = useMemo(() => {
         if (news.length === 0) return [];
        
@@ -68,11 +71,12 @@ const MarketHighlights: React.FC<MarketHighlightsProps> = ({ news }) => {
         return null;
     }
 
+    const styles = createStyles(theme);
+
     return (
         <View style={styles.highlightsSection}>
             <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Featured</Text>
-                
             </View>
             <FlatList
                 data={sortedNews}
@@ -90,9 +94,10 @@ const MarketHighlights: React.FC<MarketHighlightsProps> = ({ news }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any) => StyleSheet.create({
     highlightsSection: {
         marginBottom: 25,
+        backgroundColor: theme.colors.background,
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -104,11 +109,11 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: theme.colors.text,
     },
     debugText: {
         fontSize: 12,
-        color: '#666',
+        color: theme.colors.textSecondary,
         fontStyle: 'italic',
     },
     highlightsList: {

@@ -14,15 +14,17 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import { useTheme } from '../../contexts/ThemeContext'; // Add this import
 import { useSaveArticle } from '../../hooks/useSaveArticle';
 import { rssNewsService } from '../../services/rssNewsService';
-import { savedArticlesService } from '../../services/savedArticlesService'; // Add this import
+import { savedArticlesService } from '../../services/savedArticlesService';
 import { NewsItem as NewsItemType } from '../../types';
 
 const { width } = Dimensions.get('window');
 
 export default function NewsDetailScreen() {
   const router = useRouter();
+  const { theme, isDark } = useTheme(); // Add theme context
   const { id } = useLocalSearchParams();
   const [news, setNews] = useState<NewsItemType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -236,7 +238,7 @@ export default function NewsDetailScreen() {
     }
   };
 
-  // Custom JavaScript to disable interactive elements and show only content
+  // Enhanced injected JavaScript for better dark mode support
   const injectedJavaScript = `
     (function() {
       try {
@@ -278,14 +280,15 @@ export default function NewsDetailScreen() {
           document.body.appendChild(mainContent);
         }
         
-        // Clean up styles for better reading
+        // Clean up styles for better reading with theme support
+        const isDarkMode = ${isDark};
         const style = document.createElement('style');
         style.textContent = \`
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
             line-height: 1.6 !important;
-            color: #333 !important;
-            background: #fff !important;
+            color: \${isDarkMode ? '#FFFFFF' : '#333'} !important;
+            background: \${isDarkMode ? '#000000' : '#ffffff'} !important;
             padding: 16px !important;
             margin: 0 !important;
           }
@@ -301,18 +304,26 @@ export default function NewsDetailScreen() {
           p, div, span {
             font-size: 16px !important;
             line-height: 1.6 !important;
+            color: \${isDarkMode ? '#FFFFFF' : '#333'} !important;
           }
           h1, h2, h3, h4, h5, h6 {
-            color: #1a1a1a !important;
+            color: \${isDarkMode ? '#FFFFFF' : '#1a1a1a'} !important;
             margin: 24px 0 16px 0 !important;
           }
           a {
-            color: #007AFF !important;
+            color: \${isDarkMode ? '#0A84FF' : '#007AFF'} !important;
             text-decoration: none !important;
             pointer-events: none !important;
           }
           video, iframe, embed, object {
             display: none !important;
+          }
+          blockquote {
+            border-left: 4px solid \${isDarkMode ? '#0A84FF' : '#007AFF'} !important;
+            padding-left: 16px !important;
+            margin: 16px 0 !important;
+            background: \${isDarkMode ? '#1C1C1E' : '#F9F9F9'} !important;
+            color: \${isDarkMode ? '#FFFFFF' : '#333'} !important;
           }
         \`;
         document.head.appendChild(style);
@@ -329,23 +340,238 @@ export default function NewsDetailScreen() {
     })();
   `;
 
+  // Create dynamic styles based on current theme
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 50,
+      paddingHorizontal: 20,
+      paddingBottom: 15,
+      backgroundColor: theme.colors.headerBackground,
+      shadowColor: theme.colors.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    webViewHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingTop: 50,
+      paddingHorizontal: 20,
+      paddingBottom: 15,
+      backgroundColor: theme.colors.headerBackground,
+      shadowColor: theme.colors.shadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    webViewTitle: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+      textAlign: 'center',
+      marginHorizontal: 16,
+    },
+    savedBadge: {
+      fontSize: 14,
+      color: theme.colors.primary,
+      fontWeight: '500',
+    },
+    backButton: {
+      padding: 8,
+      borderRadius: 20,
+      backgroundColor: theme.colors.surface,
+    },
+    actionButton: {
+      padding: 8,
+      borderRadius: 20,
+      backgroundColor: theme.colors.surface,
+      marginLeft: 12,
+    },
+    actionButtonDisabled: {
+      opacity: 0.6,
+    },
+    content: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    webViewLoadingContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+      zIndex: 1,
+    },
+    articleContent: {
+      padding: 20,
+      backgroundColor: theme.colors.background,
+    },
+    savedArticleBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: isDark ? 'rgba(10, 132, 255, 0.2)' : '#F0F8FF',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 16,
+      alignSelf: 'flex-start',
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+    },
+    savedArticleText: {
+      marginLeft: 4,
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      lineHeight: 32,
+      marginBottom: 16,
+    },
+    authorInfo: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 20,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    source: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+    },
+    timeAgo: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+    },
+    description: {
+      fontSize: 16,
+      lineHeight: 26,
+      color: theme.colors.text,
+      marginBottom: 24,
+    },
+    readMoreButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: isDark ? 'rgba(10, 132, 255, 0.2)' : '#F0F8FF',
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+      marginBottom: 32,
+    },
+    readMoreText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.primary,
+    },
+    relatedSection: {
+      marginTop: 20,
+      paddingTop: 24,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+    },
+    relatedTitle: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: theme.colors.text,
+      marginBottom: 16,
+    },
+    relatedItem: {
+      flexDirection: 'row',
+      marginBottom: 16,
+      padding: 12,
+      backgroundColor: theme.colors.surface,
+      borderRadius: 12,
+    },
+    relatedContent: {
+      flex: 1,
+      justifyContent: 'space-between',
+    },
+    relatedItemTitle: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.text,
+      lineHeight: 20,
+    },
+    relatedDate: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      marginTop: 8,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+      padding: 20,
+    },
+    errorText: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginTop: 16,
+      textAlign: 'center',
+    },
+    errorSubText: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+      marginTop: 8,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    errorButton: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 8,
+      marginTop: 20,
+    },
+    errorButtonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });
+
   if (loading) {
     return <LoadingSpinner message="Loading article..." />;
   }
 
   if (!news) {
     return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color="#ccc" />
-        <Text style={styles.errorText}>Article not found</Text>
-        <Text style={styles.errorSubText}>
+      <View style={dynamicStyles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color={theme.colors.textSecondary} />
+        <Text style={dynamicStyles.errorText}>Article not found</Text>
+        <Text style={dynamicStyles.errorSubText}>
           This article may have been removed or is no longer available.
         </Text>
         <TouchableOpacity
-          style={styles.errorButton}
+          style={dynamicStyles.errorButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.errorButtonText}>Go Back</Text>
+          <Text style={dynamicStyles.errorButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -354,22 +580,22 @@ export default function NewsDetailScreen() {
   // WebView Screen with Content-Only Display
   if (showWebView) {
     return (
-      <View style={styles.container}>
+      <View style={dynamicStyles.container}>
         {/* WebView Header */}
-        <View style={styles.webViewHeader}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBackFromWebView}>
-            <Ionicons name="arrow-back" size={24} color="#333" />
+        <View style={dynamicStyles.webViewHeader}>
+          <TouchableOpacity style={dynamicStyles.backButton} onPress={handleBackFromWebView}>
+            <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
 
-          <Text style={styles.webViewTitle} numberOfLines={1}>
+          <Text style={dynamicStyles.webViewTitle} numberOfLines={1}>
             {news.source?.name || 'Article'}
             {isFromSavedArticles && (
-              <Text style={styles.savedBadge}> • Saved</Text>
+              <Text style={dynamicStyles.savedBadge}> • Saved</Text>
             )}
           </Text>
 
           <TouchableOpacity 
-            style={[styles.actionButton, isSaving && styles.actionButtonDisabled]} 
+            style={[dynamicStyles.actionButton, isSaving && dynamicStyles.actionButtonDisabled]} 
             onPress={toggleSaveArticle}
             disabled={isSaving}
           >
@@ -379,7 +605,7 @@ export default function NewsDetailScreen() {
               <Ionicons
                 name={isArticleSaved ? "bookmark" : "bookmark-outline"}
                 size={24}
-                color={isArticleSaved ? "#007AFF" : "#333"}
+                color={isArticleSaved ? theme.colors.primary : theme.colors.text}
               />
             )}
           </TouchableOpacity>
@@ -387,7 +613,7 @@ export default function NewsDetailScreen() {
 
         {/* Loading Indicator for WebView */}
         {webViewLoading && (
-          <View style={styles.webViewLoadingContainer}>
+          <View style={dynamicStyles.webViewLoadingContainer}>
             <LoadingSpinner message="Loading content..." />
           </View>
         )}
@@ -434,15 +660,15 @@ export default function NewsDetailScreen() {
 
   // Main Article Screen
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#333" />
+      <View style={dynamicStyles.header}>
+        <TouchableOpacity style={dynamicStyles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerActions}>
           <TouchableOpacity 
-            style={[styles.actionButton, isSaving && styles.actionButtonDisabled]} 
+            style={[dynamicStyles.actionButton, isSaving && dynamicStyles.actionButtonDisabled]} 
             onPress={toggleSaveArticle}
             disabled={isSaving}
           >
@@ -452,17 +678,17 @@ export default function NewsDetailScreen() {
               <Ionicons
                 name={isArticleSaved ? "bookmark" : "bookmark-outline"}
                 size={24}
-                color={isArticleSaved ? "#007AFF" : "#333"}
+                color={isArticleSaved ? theme.colors.primary : theme.colors.text}
               />
             )}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-            <Ionicons name="share-outline" size={24} color="#333" />
+          <TouchableOpacity style={dynamicStyles.actionButton} onPress={handleShare}>
+            <Ionicons name="share-outline" size={24} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={dynamicStyles.content} showsVerticalScrollIndicator={false}>
         {/* Article Image */}
         {news.urlToImage && (
           <Image
@@ -474,46 +700,46 @@ export default function NewsDetailScreen() {
         )}
 
         {/* Article Content */}
-        <View style={styles.articleContent}>
+        <View style={dynamicStyles.articleContent}>
           
           {/* Show saved article badge */}
           {isFromSavedArticles && (
-            <View style={styles.savedArticleBadge}>
-              <Ionicons name="bookmark" size={16} color="#007AFF" />
-              <Text style={styles.savedArticleText}>Saved Article</Text>
+            <View style={dynamicStyles.savedArticleBadge}>
+              <Ionicons name="bookmark" size={16} color={theme.colors.primary} />
+              <Text style={dynamicStyles.savedArticleText}>Saved Article</Text>
             </View>
           )}
           
           {/* Title */}
-          <Text style={styles.title}>{news.title}</Text>
+          <Text style={dynamicStyles.title}>{news.title}</Text>
 
           {/* Author & Date */}
-          <View style={styles.authorInfo}>
-            <Text style={styles.source}>{news.source?.name || 'Unknown Source'}</Text>
-            <Text style={styles.timeAgo}>{getTimeAgo(news.publishedAt)}</Text>
+          <View style={dynamicStyles.authorInfo}>
+            <Text style={dynamicStyles.source}>{news.source?.name || 'Unknown Source'}</Text>
+            <Text style={dynamicStyles.timeAgo}>{getTimeAgo(news.publishedAt)}</Text>
           </View>
 
           {/* Description */}
           {news.description && (
-            <Text style={styles.description}>{news.description}</Text>
+            <Text style={dynamicStyles.description}>{news.description}</Text>
           )}
 
           {/* Read Full Article Button */}
           {news.url && (
-            <TouchableOpacity style={styles.readMoreButton} onPress={handleReadFullArticle}>
-              <Text style={styles.readMoreText}>Read Full Article</Text>
-              <Ionicons name="chevron-forward" size={16} color="#007AFF" style={styles.readMoreIcon} />
+            <TouchableOpacity style={dynamicStyles.readMoreButton} onPress={handleReadFullArticle}>
+              <Text style={dynamicStyles.readMoreText}>Read Full Article</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} style={styles.readMoreIcon} />
             </TouchableOpacity>
           )}
 
           {/* Related News - Only show if not from saved articles or if there are related articles */}
           {relatedNews.length > 0 && (
-            <View style={styles.relatedSection}>
-              <Text style={styles.relatedTitle}>Related News</Text>
+            <View style={dynamicStyles.relatedSection}>
+              <Text style={dynamicStyles.relatedTitle}>Related News</Text>
               {relatedNews.map((item, index) => (
                 <TouchableOpacity
                   key={item.id || index}
-                  style={styles.relatedItem}
+                  style={dynamicStyles.relatedItem}
                   onPress={() => {
                     const relatedId = item.id?.toString() ||
                       `related_${index}_${Date.now()}`;
@@ -527,11 +753,11 @@ export default function NewsDetailScreen() {
                       defaultSource={{ uri: 'https://via.placeholder.com/80x80?text=No+Image' }}
                     />
                   )}
-                  <View style={styles.relatedContent}>
-                    <Text style={styles.relatedItemTitle} numberOfLines={2}>
+                  <View style={dynamicStyles.relatedContent}>
+                    <Text style={dynamicStyles.relatedItemTitle} numberOfLines={2}>
                       {item.title}
                     </Text>
-                    <Text style={styles.relatedDate}>{getTimeAgo(item.publishedAt)}</Text>
+                    <Text style={dynamicStyles.relatedDate}>{getTimeAgo(item.publishedAt)}</Text>
                   </View>
                 </TouchableOpacity>
               ))}
@@ -543,234 +769,26 @@ export default function NewsDetailScreen() {
   );
 }
 
+// Static styles that don't change with theme
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  webViewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  webViewTitle: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    textAlign: 'center',
-    marginHorizontal: 16,
-  },
-  savedBadge: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-  },
   headerActions: {
     flexDirection: 'row',
   },
-  actionButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-    marginLeft: 12,
-  },
-  actionButtonDisabled: {
-    opacity: 0.6,
-  },
-  content: {
-    flex: 1,
-  },
   webView: {
     flex: 1,
-  },
-  webViewLoadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    zIndex: 1,
   },
   articleImage: {
     width: width,
     height: 250,
     resizeMode: 'cover',
   },
-  articleContent: {
-    padding: 20,
-  },
-  savedArticleBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F8FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    alignSelf: 'flex-start',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  savedArticleText: {
-    marginLeft: 4,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    lineHeight: 32,
-    marginBottom: 16,
-  },
-  authorInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  source: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  timeAgo: {
-    fontSize: 14,
-    color: '#666',
-  },
-  description: {
-    fontSize: 16,
-    lineHeight: 26,
-    color: '#333',
-    marginBottom: 24,
-  },
-  readMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F0F8FF',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    marginBottom: 32,
-  },
-  readMoreText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
   readMoreIcon: {
     marginLeft: 8,
-  },
-  relatedSection: {
-    marginTop: 20,
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-  },
-  relatedTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1A1A1A',
-    marginBottom: 16,
-  },
-  relatedItem: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
   },
   relatedImage: {
     width: 80,
     height: 80,
     borderRadius: 8,
     marginRight: 12,
-  },
-  relatedContent: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  relatedItemTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    lineHeight: 20,
-  },
-  relatedDate: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  errorSubText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  errorButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 20,
-  },
-  errorButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
