@@ -19,7 +19,7 @@ class RSSNewsService {
     private readonly LAST_USAGE_KEY = 'last_service_usage';
     private readonly CACHE_DURATION = 12 * 60 * 60 * 1000; // 12 hours
     private readonly REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-    
+
     private isLoading = false;
     private cachedData: CachedNewsData | null = null;
     private xmlParser: XMLParser;
@@ -59,7 +59,7 @@ class RSSNewsService {
     // Direct RSS feed URLs
     private readonly RSS_FEEDS: RSSFeed[] = [
         {
-            url: 'https://cryptews.com/rss.xml',
+            url: 'https://icogemhunters.com/category/ico-blog/feed/',
             name: 'Cryptews',
             category: 'general'
         },
@@ -144,108 +144,108 @@ class RSSNewsService {
      * FIXED: Get crypto news with proper app reopen detection and full fetch logic
      */
     async getCryptoNews(limit: number = 0): Promise<NewsItem[]> {
-    try {
-        console.log('🔄 Getting crypto news...');
-        
-        const now = Date.now();
-        
-        // Load cached data if not already loaded
-        if (!this.cachedData) {
-            await this.loadCachedData();
-        }
+        try {
+            console.log('🔄 Getting crypto news...');
 
-        // Store original cache as backup
-const originalCache = this.cachedData ? { ...this.cachedData } : null;
+            const now = Date.now();
 
-        // FIXED: Detect if app was reopened (gap in service usage > 30 seconds)
-        const timeSinceLastUsage = now - this.lastServiceUsage;
-        const appWasReopened = this.lastServiceUsage > 0 && timeSinceLastUsage > 30000;
-        const isForceRefresh = this.lastServiceUsage === 0; // Force refresh sets this to 0
-        
-        // Update last usage time and save it
-        this.lastServiceUsage = now;
-        await this.saveLastUsage();
+            // Load cached data if not already loaded
+            if (!this.cachedData) {
+                await this.loadCachedData();
+            }
 
-        // Check refresh conditions
-        const shouldRefresh = this.shouldRefreshNews(now);
-        const shouldFetch = this.shouldFetchNews(now);
-        const hasValidCache = this.hasValidCachedData();
+            // Store original cache as backup
+            const originalCache = this.cachedData ? { ...this.cachedData } : null;
 
-        console.log('📊 Cache status:', {
-            shouldRefresh,
-            shouldFetch,
-            hasValidCache,
-            appWasReopened,
-            isForceRefresh,
-            timeSinceLastUsage,
-            cacheExists: !!this.cachedData,
-            cacheSize: this.cachedData?.news?.length || 0,
-            lastFetch: this.cachedData?.lastFetch || 0,
-            lastRefresh: this.cachedData?.lastRefresh || 0,
-            now
-        });
+            // FIXED: Detect if app was reopened (gap in service usage > 30 seconds)
+            const timeSinceLastUsage = now - this.lastServiceUsage;
+            const appWasReopened = this.lastServiceUsage > 0 && timeSinceLastUsage > 30000;
+            const isForceRefresh = this.lastServiceUsage === 0; // Force refresh sets this to 0
 
-        // Determine fetch strategy
-        const forceFullFetchOnReopen = appWasReopened && shouldRefresh;
-        const needsFullFetch = !hasValidCache || shouldFetch || forceFullFetchOnReopen || isForceRefresh;
-        const needsRefresh = shouldRefresh && !needsFullFetch;
+            // Update last usage time and save it
+            this.lastServiceUsage = now;
+            await this.saveLastUsage();
 
-        // Try to fetch if needed
-        if (needsFullFetch || needsRefresh) {
-            console.log('🚀 Attempting fetch/refresh...', {
-                reason: !hasValidCache ? 'no cache' : 
-                       shouldFetch ? 'cache expired' : 
-                       forceFullFetchOnReopen ? 'app reopened + refresh needed' : 
-                       isForceRefresh ? 'force refresh' :
-                       'regular refresh',
-                fullFetch: needsFullFetch
+            // Check refresh conditions
+            const shouldRefresh = this.shouldRefreshNews(now);
+            const shouldFetch = this.shouldFetchNews(now);
+            const hasValidCache = this.hasValidCachedData();
+
+            console.log('📊 Cache status:', {
+                shouldRefresh,
+                shouldFetch,
+                hasValidCache,
+                appWasReopened,
+                isForceRefresh,
+                timeSinceLastUsage,
+                cacheExists: !!this.cachedData,
+                cacheSize: this.cachedData?.news?.length || 0,
+                lastFetch: this.cachedData?.lastFetch || 0,
+                lastRefresh: this.cachedData?.lastRefresh || 0,
+                now
             });
-            
-            try {
-                await this.fetchAndCacheNews(needsFullFetch);
-                
-                // ✅ FIXED: Check if fetch actually got real data
-                if (this.cachedData?.news && this.cachedData.news.length > 0) {
-                    // Check if we got mock data (indicating network failure)
-                    const isMockData = this.cachedData.news.length === 2 && 
-                        this.cachedData.news[0].title === "Bitcoin Reaches New All-Time High as Institutional Adoption Grows";
-                    
-                    if (isMockData && originalCache?.news && originalCache.news.length > 0) {
-                        // Restore original cache if we only got mock data
-                        console.log('🔄 Restoring original cache - network fetch failed');
+
+            // Determine fetch strategy
+            const forceFullFetchOnReopen = appWasReopened && shouldRefresh;
+            const needsFullFetch = !hasValidCache || shouldFetch || forceFullFetchOnReopen || isForceRefresh;
+            const needsRefresh = shouldRefresh && !needsFullFetch;
+
+            // Try to fetch if needed
+            if (needsFullFetch || needsRefresh) {
+                console.log('🚀 Attempting fetch/refresh...', {
+                    reason: !hasValidCache ? 'no cache' :
+                        shouldFetch ? 'cache expired' :
+                            forceFullFetchOnReopen ? 'app reopened + refresh needed' :
+                                isForceRefresh ? 'force refresh' :
+                                    'regular refresh',
+                    fullFetch: needsFullFetch
+                });
+
+                try {
+                    await this.fetchAndCacheNews(needsFullFetch);
+
+                    // ✅ FIXED: Check if fetch actually got real data
+                    if (this.cachedData?.news && this.cachedData.news.length > 0) {
+                        // Check if we got mock data (indicating network failure)
+                        const isMockData = this.cachedData.news.length === 2 &&
+                            this.cachedData.news[0].title === "Bitcoin Reaches New All-Time High as Institutional Adoption Grows";
+
+                        if (isMockData && originalCache?.news && originalCache.news.length > 0) {
+                            // Restore original cache if we only got mock data
+                            console.log('🔄 Restoring original cache - network fetch failed');
+                            this.cachedData = originalCache;
+                            await AsyncStorage.setItem(this.CACHE_KEY, JSON.stringify(originalCache));
+                        }
+                    }
+
+                } catch (error) {
+                    console.warn('⚠️ Network fetch failed, using cached data:', error);
+                    // Restore original cache on network error
+                    if (originalCache?.news && originalCache.news.length > 0) {
                         this.cachedData = originalCache;
-                        await AsyncStorage.setItem(this.CACHE_KEY, JSON.stringify(originalCache));
                     }
                 }
-                
-            } catch (error) {
-                console.warn('⚠️ Network fetch failed, using cached data:', error);
-                // Restore original cache on network error
-                if (originalCache?.news && originalCache.news.length > 0) {
-                    this.cachedData = originalCache;
-                }
             }
-        }
 
-        // Return cached data
-        const news = this.cachedData?.news || [];
-        console.log('✅ Returning news items:', news.length);
-        
-        return limit > 0 ? news.slice(0, limit) : news;
+            // Return cached data
+            const news = this.cachedData?.news || [];
+            console.log('✅ Returning news items:', news.length);
 
-    } catch (error) {
-        console.error('❌ Error getting crypto news:', error);
-        
-        // Always return cached data if available
-        if (this.cachedData?.news && this.cachedData.news.length > 0) {
-            console.log('🔄 Returning cached data due to error');
-            const news = this.cachedData.news;
             return limit > 0 ? news.slice(0, limit) : news;
+
+        } catch (error) {
+            console.error('❌ Error getting crypto news:', error);
+
+            // Always return cached data if available
+            if (this.cachedData?.news && this.cachedData.news.length > 0) {
+                console.log('🔄 Returning cached data due to error');
+                const news = this.cachedData.news;
+                return limit > 0 ? news.slice(0, limit) : news;
+            }
+
+            return this.getMockNews();
         }
-        
-        return this.getMockNews();
     }
-}
 
     /**
      * Check if we have valid cached data
@@ -283,46 +283,46 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
     /**
      * Force refresh news from RSS feeds
      */
-   async forceRefresh(): Promise<NewsItem[]> {
-    try {
-        console.log('🔄 Force refreshing news...');
-        
-        // ✅ FIXED: Don't clear cache immediately, keep it as backup
-        const backupCache = this.cachedData ? { ...this.cachedData } : null;
+    async forceRefresh(): Promise<NewsItem[]> {
+        try {
+            console.log('🔄 Force refreshing news...');
 
-        
-        // Update last usage to trigger fresh fetch
-        this.lastServiceUsage = 0;
-        await AsyncStorage.removeItem(this.LAST_USAGE_KEY);
-        
-        // Try to get fresh news
-        const freshNews = await this.getCryptoNews();
-        
-        // ✅ FIXED: If we got fresh news, return it. Otherwise, restore backup
-        if (freshNews.length > 2 || (freshNews.length === 2 && freshNews[0].title !== "Bitcoin Reaches New All-Time High as Institutional Adoption Grows")) {
-            // We got real news, not mock data
-            return freshNews;
-        } else {
-            // We got mock data, restore backup cache
-            console.log('🔄 Force refresh failed, restoring backup cache');
-            this.cachedData = backupCache;
-            if (backupCache) {
-                await AsyncStorage.setItem(this.CACHE_KEY, JSON.stringify(backupCache));
+            // ✅ FIXED: Don't clear cache immediately, keep it as backup
+            const backupCache = this.cachedData ? { ...this.cachedData } : null;
+
+
+            // Update last usage to trigger fresh fetch
+            this.lastServiceUsage = 0;
+            await AsyncStorage.removeItem(this.LAST_USAGE_KEY);
+
+            // Try to get fresh news
+            const freshNews = await this.getCryptoNews();
+
+            // ✅ FIXED: If we got fresh news, return it. Otherwise, restore backup
+            if (freshNews.length > 2 || (freshNews.length === 2 && freshNews[0].title !== "Bitcoin Reaches New All-Time High as Institutional Adoption Grows")) {
+                // We got real news, not mock data
+                return freshNews;
+            } else {
+                // We got mock data, restore backup cache
+                console.log('🔄 Force refresh failed, restoring backup cache');
+                this.cachedData = backupCache;
+                if (backupCache) {
+                    await AsyncStorage.setItem(this.CACHE_KEY, JSON.stringify(backupCache));
+                }
+                return backupCache?.news || this.getMockNews();
             }
-            return backupCache?.news || this.getMockNews();
+
+        } catch (error) {
+            console.error('❌ Error force refreshing news:', error);
+
+            // ✅ FIXED: Return cached data if available, don't clear it
+            if (this.cachedData?.news && this.cachedData.news.length > 0) {
+                return this.cachedData.news;
+            }
+
+            return this.getMockNews();
         }
-        
-    } catch (error) {
-        console.error('❌ Error force refreshing news:', error);
-        
-        // ✅ FIXED: Return cached data if available, don't clear it
-        if (this.cachedData?.news && this.cachedData.news.length > 0) {
-            return this.cachedData.news;
-        }
-        
-        return this.getMockNews();
     }
-}
     /**
      * Check if we should refresh news (every 5 minutes)
      */
@@ -347,8 +347,8 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
             const cached = await AsyncStorage.getItem(this.CACHE_KEY);
             if (cached) {
                 const parsedData = JSON.parse(cached);
-                if (parsedData && Array.isArray(parsedData.news) && 
-                    typeof parsedData.lastFetch === 'number' && 
+                if (parsedData && Array.isArray(parsedData.news) &&
+                    typeof parsedData.lastFetch === 'number' &&
                     typeof parsedData.lastRefresh === 'number') {
                     this.cachedData = parsedData;
                     console.log('📦 Loaded cached data:', this.cachedData?.news?.length || 0, 'items');
@@ -370,147 +370,147 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
     /**
      * FIXED: Enhanced fetchAndCacheNews with better error handling and logging
      */
-   private async fetchAndCacheNews(fullFetch: boolean): Promise<void> {
-    if (this.isLoading) {
-        console.log('⏳ Already loading, skipping...');
-        return;
-    }
-    
-    this.isLoading = true;
-    console.log('🚀 Starting to fetch news... Full fetch:', fullFetch);
-    
-    // Store existing cache as backup
-    const backupCache = this.cachedData ? { ...this.cachedData } : null;
-
-    
-    try {
-        const now = Date.now();
-        let allNews: NewsItem[] = [];
-
-        if (fullFetch) {
-            console.log('📡 Full fetch: Fetching from all RSS feeds...');
-            allNews = await this.fetchFromAllFeeds();
-        } else {
-            console.log('📡 Refresh: Fetching recent news only...');
-            const recentNews = await this.fetchRecentNews();
-            const existingNews = this.cachedData?.news || [];
-            allNews = this.mergeAndDeduplicateNews(recentNews, existingNews);
+    private async fetchAndCacheNews(fullFetch: boolean): Promise<void> {
+        if (this.isLoading) {
+            console.log('⏳ Already loading, skipping...');
+            return;
         }
 
-        console.log('📊 Fetched news count:', allNews.length);
+        this.isLoading = true;
+        console.log('🚀 Starting to fetch news... Full fetch:', fullFetch);
 
-        // ✅ FIXED: Only use mock data if we have no existing cache at all
-        if (allNews.length === 0) {
-            if (!backupCache?.news || backupCache.news.length === 0) {
-                // No existing cache, use mock data
-                console.log('⚠️ No news fetched and no existing cache, using mock data');
-                allNews = this.getMockNews();
+        // Store existing cache as backup
+        const backupCache = this.cachedData ? { ...this.cachedData } : null;
+
+
+        try {
+            const now = Date.now();
+            let allNews: NewsItem[] = [];
+
+            if (fullFetch) {
+                console.log('📡 Full fetch: Fetching from all RSS feeds...');
+                allNews = await this.fetchFromAllFeeds();
             } else {
-                // Have existing cache, don't fetch new data, keep existing
-                console.log('⚠️ No news fetched but have existing cache, keeping existing data');
-                return; // Don't update cache, keep existing
+                console.log('📡 Refresh: Fetching recent news only...');
+                const recentNews = await this.fetchRecentNews();
+                const existingNews = this.cachedData?.news || [];
+                allNews = this.mergeAndDeduplicateNews(recentNews, existingNews);
             }
-        }
 
-        // ✅ FIXED: Don't save mock data if we have real cached data
-        const isMockData = allNews.length === 2 && 
-            allNews[0].title === "Bitcoin Reaches New All-Time High as Institutional Adoption Grows";
-        
-        if (isMockData && backupCache?.news && backupCache.news.length > 0) {
-            console.log('⚠️ Not saving mock data, keeping existing cache');
-            return; // Don't overwrite real data with mock data
-        }
+            console.log('📊 Fetched news count:', allNews.length);
 
-        // Sort by date (newest first)
-        allNews.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+            // ✅ FIXED: Only use mock data if we have no existing cache at all
+            if (allNews.length === 0) {
+                if (!backupCache?.news || backupCache.news.length === 0) {
+                    // No existing cache, use mock data
+                    console.log('⚠️ No news fetched and no existing cache, using mock data');
+                    allNews = this.getMockNews();
+                } else {
+                    // Have existing cache, don't fetch new data, keep existing
+                    console.log('⚠️ No news fetched but have existing cache, keeping existing data');
+                    return; // Don't update cache, keep existing
+                }
+            }
 
-        // Update cache
-        this.cachedData = {
-            news: allNews,
-            lastFetch: fullFetch ? now : (this.cachedData?.lastFetch || now),
-            lastRefresh: now
-        };
+            // ✅ FIXED: Don't save mock data if we have real cached data
+            const isMockData = allNews.length === 2 &&
+                allNews[0].title === "Bitcoin Reaches New All-Time High as Institutional Adoption Grows";
 
-        console.log('💾 Caching news:', allNews.length, 'items');
+            if (isMockData && backupCache?.news && backupCache.news.length > 0) {
+                console.log('⚠️ Not saving mock data, keeping existing cache');
+                return; // Don't overwrite real data with mock data
+            }
 
-        // Save to AsyncStorage
-        await AsyncStorage.setItem(this.CACHE_KEY, JSON.stringify(this.cachedData));
+            // Sort by date (newest first)
+            allNews.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 
-    } catch (error) {
-        console.error('❌ Error fetching and caching news:', error);
-        
-        // ✅ FIXED: Restore backup cache on error, don't use mock data
-        if (backupCache?.news && backupCache.news.length > 0) {
-            console.log('📦 Restoring backup cache due to network error');
-            this.cachedData = backupCache;
-        } else {
-            // Only use mock data if no backup exists
-            console.log('🧪 Using mock data - no backup cache available');
+            // Update cache
             this.cachedData = {
-                news: this.getMockNews(),
-                lastFetch: Date.now(),
-                lastRefresh: Date.now()
+                news: allNews,
+                lastFetch: fullFetch ? now : (this.cachedData?.lastFetch || now),
+                lastRefresh: now
             };
-            
-            try {
-                await AsyncStorage.setItem(this.CACHE_KEY, JSON.stringify(this.cachedData));
-            } catch (saveError) {
-                console.error('❌ Error saving data to cache:', saveError);
+
+            console.log('💾 Caching news:', allNews.length, 'items');
+
+            // Save to AsyncStorage
+            await AsyncStorage.setItem(this.CACHE_KEY, JSON.stringify(this.cachedData));
+
+        } catch (error) {
+            console.error('❌ Error fetching and caching news:', error);
+
+            // ✅ FIXED: Restore backup cache on error, don't use mock data
+            if (backupCache?.news && backupCache.news.length > 0) {
+                console.log('📦 Restoring backup cache due to network error');
+                this.cachedData = backupCache;
+            } else {
+                // Only use mock data if no backup exists
+                console.log('🧪 Using mock data - no backup cache available');
+                this.cachedData = {
+                    news: this.getMockNews(),
+                    lastFetch: Date.now(),
+                    lastRefresh: Date.now()
+                };
+
+                try {
+                    await AsyncStorage.setItem(this.CACHE_KEY, JSON.stringify(this.cachedData));
+                } catch (saveError) {
+                    console.error('❌ Error saving data to cache:', saveError);
+                }
             }
+        } finally {
+            this.isLoading = false;
         }
-    } finally {
-        this.isLoading = false;
     }
-}
 
     /**
      * FIXED: Enhanced fetchFromAllFeeds with better error handling
      */
     private async fetchFromAllFeeds(): Promise<NewsItem[]> {
-    console.log('📡 Fetching from all feeds...');
-    
-    // ✅ FIXED: Add timeout and better promise handling
-    const fetchPromises = this.RSS_FEEDS.map(async (feed) => {
-        try {
-            console.log(`🔗 Starting fetch from ${feed.name}...`);
-            const items = await this.fetchRSSFeed(feed);
-            console.log(`✅ Successfully fetched from ${feed.name}: ${items.length} items`);
-            return items;
-        } catch (error) {
-            console.error(`❌ Failed to fetch from ${feed.name}:`, error);
-            return [];
-        }
-    });
-    
-    // ✅ FIXED: Use Promise.allSettled with timeout
-    const timeoutPromise = new Promise<PromiseSettledResult<NewsItem[]>[]>((_, reject) => {
-        setTimeout(() => reject(new Error('Fetch timeout')), 60000); // 60 second timeout
-    });
-    
-    try {
-        const results = await Promise.race([
-            Promise.allSettled(fetchPromises),
-            timeoutPromise
-        ]);
-        
-        const allNews: NewsItem[] = [];
-        
-        results.forEach((result, index) => {
-            if (result.status === 'fulfilled') {
-                allNews.push(...result.value);
-            } else {
-                console.error(`❌ Feed ${this.RSS_FEEDS[index].name} failed:`, result.reason);
+        console.log('📡 Fetching from all feeds...');
+
+        // ✅ FIXED: Add timeout and better promise handling
+        const fetchPromises = this.RSS_FEEDS.map(async (feed) => {
+            try {
+                console.log(`🔗 Starting fetch from ${feed.name}...`);
+                const items = await this.fetchRSSFeed(feed);
+                console.log(`✅ Successfully fetched from ${feed.name}: ${items.length} items`);
+                return items;
+            } catch (error) {
+                console.error(`❌ Failed to fetch from ${feed.name}:`, error);
+                return [];
             }
         });
-        
-        console.log(`📊 Total items fetched from all feeds: ${allNews.length}`);
-        return this.deduplicateNews(allNews);
-        
-    } catch (error) {
-        console.error('❌ Error in fetchFromAllFeeds:', error);
-        return [];
+
+        // ✅ FIXED: Use Promise.allSettled with timeout
+        const timeoutPromise = new Promise<PromiseSettledResult<NewsItem[]>[]>((_, reject) => {
+            setTimeout(() => reject(new Error('Fetch timeout')), 60000); // 60 second timeout
+        });
+
+        try {
+            const results = await Promise.race([
+                Promise.allSettled(fetchPromises),
+                timeoutPromise
+            ]);
+
+            const allNews: NewsItem[] = [];
+
+            results.forEach((result, index) => {
+                if (result.status === 'fulfilled') {
+                    allNews.push(...result.value);
+                } else {
+                    console.error(`❌ Feed ${this.RSS_FEEDS[index].name} failed:`, result.reason);
+                }
+            });
+
+            console.log(`📊 Total items fetched from all feeds: ${allNews.length}`);
+            return this.deduplicateNews(allNews);
+
+        } catch (error) {
+            console.error('❌ Error in fetchFromAllFeeds:', error);
+            return [];
+        }
     }
-}
 
     /**
      * Fetch only recent news (for refresh)
@@ -518,13 +518,13 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
     private async fetchRecentNews(): Promise<NewsItem[]> {
         console.log('📡 Fetching recent news...');
         const cutoffTime = Date.now() - this.REFRESH_INTERVAL;
-        const promises = this.RSS_FEEDS.map(feed => 
+        const promises = this.RSS_FEEDS.map(feed =>
             this.fetchRSSFeed(feed, new Date(cutoffTime))
         );
-        
+
         const results = await Promise.allSettled(promises);
         const recentNews: NewsItem[] = [];
-        
+
         results.forEach((result, index) => {
             if (result.status === 'fulfilled') {
                 recentNews.push(...result.value);
@@ -542,10 +542,10 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
     private async fetchRSSFeed(feed: RSSFeed, since?: Date): Promise<NewsItem[]> {
         try {
             console.log(`🔗 Fetching XML from ${feed.name}...`);
-            
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 20000); // Increased timeout
-            
+
             const response = await fetch(feed.url, {
                 method: 'GET',
                 headers: {
@@ -564,29 +564,29 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
 
             const xmlText = await response.text();
             console.log(`📄 Received XML data from ${feed.name}, length: ${xmlText.length}`);
-            
+
             // ✅ FIXED: Add XML validation before parsing
             if (!xmlText || xmlText.length < 100) {
                 throw new Error('Invalid or empty XML response');
             }
-            
+
             // Parse XML using fast-xml-parser
             const result = this.xmlParser.parse(xmlText);
-            
+
             // ✅ FIXED: Add result validation
             if (!result) {
                 throw new Error('Failed to parse XML');
             }
-            
+
             const newsItems = this.parseRSSResult(result, feed, since);
             console.log(`✅ Parsed ${newsItems.length} items from ${feed.name}`);
-            
+
             // ✅ FIXED: Add warning if no items parsed but XML was received
             if (newsItems.length === 0 && xmlText.length > 100) {
                 console.warn(`⚠️ No items parsed from ${feed.name} despite receiving XML data`);
                 console.log('📊 XML structure sample:', JSON.stringify(result, null, 2).substring(0, 500));
             }
-            
+
             return newsItems;
 
         } catch (error) {
@@ -601,18 +601,18 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
     private parseRSSResult(result: any, feed: RSSFeed, since?: Date): NewsItem[] {
         try {
             const newsItems: NewsItem[] = [];
-            
+
             // ✅ FIXED: Handle different RSS structures with better debugging
             let items: any[] = [];
-            
+
             if (result.rss?.channel?.item) {
-                items = Array.isArray(result.rss.channel.item) 
-                    ? result.rss.channel.item 
+                items = Array.isArray(result.rss.channel.item)
+                    ? result.rss.channel.item
                     : [result.rss.channel.item];
                 console.log(`🔍 Found ${items.length} items in RSS from ${feed.name}`);
             } else if (result.feed?.entry) {
-                items = Array.isArray(result.feed.entry) 
-                    ? result.feed.entry 
+                items = Array.isArray(result.feed.entry)
+                    ? result.feed.entry
                     : [result.feed.entry];
                 console.log(`🔍 Found ${items.length} items in Atom feed from ${feed.name}`);
             } else {
@@ -630,7 +630,7 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
 
             // ✅ FIXED: Filter by date first, then parse (more efficient)
             const cutoffTime = since ? since.getTime() : 0;
-            
+
             items.forEach((item, index) => {
                 try {
                     // Quick date check before full parsing
@@ -643,14 +643,14 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
                             }
                         }
                     }
-                    
+
                     const newsItem = this.parseRSSItem(item, feed);
-                    
+
                     // Final date filter after full parsing
                     if (since && new Date(newsItem.publishedAt) < since) {
                         return;
                     }
-                    
+
                     newsItems.push(newsItem);
                 } catch (error) {
                     console.warn(`⚠️ Error parsing RSS item ${index} from ${feed.name}:`, error);
@@ -668,26 +668,39 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
     }
 
     /**
-     * Parse individual RSS item to NewsItem
-     */
+    * Parse individual RSS item to NewsItem
+    */
     private parseRSSItem(item: any, feed: RSSFeed): NewsItem {
         // Extract basic fields with fallbacks
         const title = this.getItemValue(item, ['title']) || 'Untitled';
-        const description = this.getItemValue(item, ['description', 'summary', 'content']) || '';
+
+        // NEW: Priority for content - first try content:encoded, then fallback to description
+        let description = '';
+        let fullContent = '';
+
+        // Try to get full content from content:encoded first
+        const contentEncoded = this.getItemValue(item, ['content:encoded', 'contentencoded', 'content']);
+        if (contentEncoded) {
+            fullContent = contentEncoded;
+            description = this.cleanHtmlContent(contentEncoded);
+        } else {
+            // Fallback to regular description fields
+            const regularDescription = this.getItemValue(item, ['description', 'summary']) || '';
+            description = this.cleanHtmlContent(regularDescription);
+            fullContent = regularDescription;
+        }
+
         const link = this.getItemValue(item, ['link', 'guid']) || '';
         const pubDate = this.getItemValue(item, ['pubDate', 'pubdate', 'published', 'date', 'updated']) || new Date().toISOString();
         const guid = this.getItemValue(item, ['guid', 'id']) || link || title;
 
-        // Extract image URL
-        let imageUrl = this.extractImageUrl(item, description);
-        
+        // Extract image URL - now also check the full content
+        let imageUrl = this.extractImageUrl(item, fullContent);
+
         // Use placeholder if no image found
         if (!imageUrl) {
             imageUrl = `https://foxbeep.com/logo.png`;
         }
-
-        // Clean description
-        const cleanDescription = this.cleanHtmlContent(description);
 
         // Extract categories
         const categories: string[] = [];
@@ -702,7 +715,8 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
         return {
             id: this.generateId(guid),
             title: this.cleanHtmlContent(title).trim(),
-            description: cleanDescription.substring(0, 300),
+            description: description, // Now contains full content from content:encoded
+            content: fullContent, // Store original HTML content if needed
             url: link,
             urlToImage: imageUrl,
             publishedAt: this.parseDate(pubDate),
@@ -713,7 +727,6 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
             ...(feed.category && { feedCategory: feed.category })
         };
     }
-
     /**
      * Get value from item with multiple possible keys
      */
@@ -753,17 +766,17 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
         for (const key of mediaContentKeys) {
             if (item[key]) {
                 const mediaContent = Array.isArray(item[key]) ? item[key][0] : item[key];
-                
+
                 // Check for @_url attribute (fast-xml-parser format)
                 if (mediaContent?.['@_url']) {
                     return mediaContent['@_url'];
                 }
-                
+
                 // Check for url attribute
                 if (mediaContent?.url) {
                     return mediaContent.url;
                 }
-                
+
                 // Check for $ attribute format
                 if (mediaContent?.$ && mediaContent.$.url) {
                     return mediaContent.$.url;
@@ -776,17 +789,17 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
         for (const key of mediaThumbnailKeys) {
             if (item[key]) {
                 const thumbnail = Array.isArray(item[key]) ? item[key][0] : item[key];
-                
+
                 // Check for @_url attribute (fast-xml-parser format)
                 if (thumbnail?.['@_url']) {
                     return thumbnail['@_url'];
                 }
-                
+
                 // Check for url attribute
                 if (thumbnail?.url) {
                     return thumbnail.url;
                 }
-                
+
                 // Check for $ attribute format
                 if (thumbnail?.$ && thumbnail.$.url) {
                     return thumbnail.$.url;
@@ -819,7 +832,7 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
      */
     private cleanHtmlContent(content: string): string {
         if (!content) return '';
-        
+
         return content
             .replace(/<[^>]*>/g, '')
             .replace(/&nbsp;/g, ' ')
@@ -843,10 +856,10 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
             if (!dateString || dateString.trim() === '') {
                 return new Date().toISOString();
             }
-            
+
             // Try parsing the date directly
             let date = new Date(dateString);
-            
+
             // If invalid, try cleaning common RSS date formats
             if (isNaN(date.getTime())) {
                 // Remove timezone abbreviations that JS can't parse
@@ -854,16 +867,16 @@ const originalCache = this.cachedData ? { ...this.cachedData } : null;
                     .replace(/\s+(GMT|UTC|EST|PST|CST|MST|EDT|PDT|CDT|MDT)\s*$/i, '')
                     .replace(/\s+\+\d{4}$/, '') // Remove +0000 format
                     .trim();
-                
+
                 date = new Date(cleanedDate);
             }
-            
+
             // If still invalid, return current date
             if (isNaN(date.getTime())) {
                 console.warn(`Invalid date format: ${dateString}`);
                 return new Date().toISOString();
             }
-            
+
             return date.toISOString();
         } catch (error) {
             console.warn(`Error parsing date: ${dateString}`, error);

@@ -49,13 +49,15 @@ export interface NewsItem {
   id: number;
   title: string;
   description: string;
+  content?: string; // Add this field for full content
   url: string;
-  publishedAt: string; // Changed from published_at to match your API transformation
+  publishedAt: string;
   source: {
     name: string;
   };
-  urlToImage?: string; // Changed from image to match your API transformation
+  urlToImage?: string;
 }
+
 
 export interface ApiResponse<T> {
   data: T;

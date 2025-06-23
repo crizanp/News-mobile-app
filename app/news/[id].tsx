@@ -12,9 +12,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import RenderHTML from 'react-native-render-html';
 import { WebView } from 'react-native-webview';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { useTheme } from '../../contexts/ThemeContext'; // Add this import
+import { useTheme } from '../../contexts/ThemeContext';
 import { useSaveArticle } from '../../hooks/useSaveArticle';
 import { rssNewsService } from '../../services/rssNewsService';
 import { savedArticlesService } from '../../services/savedArticlesService';
@@ -24,7 +25,7 @@ const { width } = Dimensions.get('window');
 
 export default function NewsDetailScreen() {
   const router = useRouter();
-  const { theme, isDark } = useTheme(); // Add theme context
+  const { theme, isDark } = useTheme();
   const { id } = useLocalSearchParams();
   const [news, setNews] = useState<NewsItemType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -32,6 +33,85 @@ export default function NewsDetailScreen() {
   const [showWebView, setShowWebView] = useState<boolean>(false);
   const [webViewLoading, setWebViewLoading] = useState<boolean>(false);
   const [isFromSavedArticles, setIsFromSavedArticles] = useState<boolean>(false);
+
+  // FIXED: Enhanced HTML cleaning and formatting function
+  const cleanHTML = (html: string) => {
+    if (!html) return '';
+
+    let cleanedHtml = html;
+
+    // First, decode HTML entities
+    cleanedHtml = cleanedHtml
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&hellip;/g, '...')
+      .replace(/&mdash;/g, '—')
+      .replace(/&ndash;/g, '–')
+
+    // Remove or replace problematic elements
+    cleanedHtml = cleanedHtml
+      .replace(/<script[^>]*>.*?<\/script>/gis, '') // Remove script tags
+      .replace(/<style[^>]*>.*?<\/style>/gis, '') // Remove style tags
+      .replace(/<iframe[^>]*>.*?<\/iframe>/gis, '') // Remove iframes
+      .replace(/<embed[^>]*\/?>/gis, '') // Remove embed tags
+      .replace(/<object[^>]*>.*?<\/object>/gis, '') // Remove object tags
+      .replace(/<form[^>]*>.*?<\/form>/gis, '') // Remove forms
+      .replace(/<input[^>]*\/?>/gis, '') // Remove input tags
+      .replace(/<button[^>]*>.*?<\/button>/gis, '') // Remove buttons
+      .replace(/<select[^>]*>.*?<\/select>/gis, '') // Remove select tags
+      .replace(/<textarea[^>]*>.*?<\/textarea>/gis, '') // Remove textareas
+      .replace(/onclick\s*=\s*"[^"]*"/gis, '') // Remove onclick attributes
+      .replace(/javascript:[^"']*/gis, '') // Remove javascript: links
+      .replace(/on\w+\s*=\s*"[^"]*"/gis, ''); // Remove other event handlers
+
+    // Clean up multiple spaces and newlines
+    cleanedHtml = cleanedHtml
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .replace(/>\s+</g, '><') // Remove spaces between tags
+      .trim();
+
+    // If the content doesn't have proper HTML structure, wrap it in paragraphs
+    if (!cleanedHtml.includes('<p>') && !cleanedHtml.includes('<div>') && !cleanedHtml.includes('<h')) {
+      // Split by double line breaks and wrap each part in <p> tags
+      const paragraphs = cleanedHtml.split(/\n\s*\n/).filter(p => p.trim());
+      if (paragraphs.length > 1) {
+        cleanedHtml = paragraphs.map(p => `<p>${p.trim()}</p>`).join('');
+      } else {
+        cleanedHtml = `<p>${cleanedHtml}</p>`;
+      }
+    }
+
+    return cleanedHtml;
+  };
+
+  // FIXED: Enhanced content extraction for different content types
+  const getFormattedContent = (newsItem: NewsItemType) => {
+    // Priority order for content:
+    // 1. content (if available and contains HTML)
+    // 2. description (with HTML formatting)
+    // 3. fallback to plain description
+
+    let htmlContent = '';
+
+    // Check if newsItem has a 'content' field (from your paste.txt example)
+    if (newsItem.content && typeof newsItem.content === 'string') {
+      htmlContent = newsItem.content;
+    }
+    // If no content field, use description
+    else if (newsItem.description) {
+      htmlContent = newsItem.description;
+    }
+    // Fallback to title if no other content
+    else {
+      htmlContent = `<p>${newsItem.title}</p>`;
+    }
+
+    return cleanHTML(htmlContent);
+  };
 
   // Use the save article hook
   const {
@@ -92,7 +172,7 @@ export default function NewsDetailScreen() {
         );
       }
 
-      // NEW: Method 4 - Check saved articles if not found in current feed
+      // Method 4 - Check saved articles if not found in current feed
       if (!newsItem && id) {
         console.log('Not found in current feed, checking saved articles...');
         try {
@@ -100,7 +180,7 @@ export default function NewsDetailScreen() {
           console.log('Total saved articles:', savedArticles.length);
 
           const idString = id.toString();
-          
+
           // Try to find in saved articles using the same matching logic
           newsItem = savedArticles.find(item => {
             // Direct ID match
@@ -594,8 +674,8 @@ export default function NewsDetailScreen() {
             )}
           </Text>
 
-          <TouchableOpacity 
-            style={[dynamicStyles.actionButton, isSaving && dynamicStyles.actionButtonDisabled]} 
+          <TouchableOpacity
+            style={[dynamicStyles.actionButton, isSaving && dynamicStyles.actionButtonDisabled]}
             onPress={toggleSaveArticle}
             disabled={isSaving}
           >
@@ -658,6 +738,9 @@ export default function NewsDetailScreen() {
     );
   }
 
+  // FIXED: Get properly formatted HTML content
+  const formattedContent = getFormattedContent(news);
+
   // Main Article Screen
   return (
     <View style={dynamicStyles.container}>
@@ -667,8 +750,8 @@ export default function NewsDetailScreen() {
           <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerActions}>
-          <TouchableOpacity 
-            style={[dynamicStyles.actionButton, isSaving && dynamicStyles.actionButtonDisabled]} 
+          <TouchableOpacity
+            style={[dynamicStyles.actionButton, isSaving && dynamicStyles.actionButtonDisabled]}
             onPress={toggleSaveArticle}
             disabled={isSaving}
           >
@@ -701,7 +784,7 @@ export default function NewsDetailScreen() {
 
         {/* Article Content */}
         <View style={dynamicStyles.articleContent}>
-          
+
           {/* Show saved article badge */}
           {isFromSavedArticles && (
             <View style={dynamicStyles.savedArticleBadge}>
@@ -709,7 +792,7 @@ export default function NewsDetailScreen() {
               <Text style={dynamicStyles.savedArticleText}>Saved Article</Text>
             </View>
           )}
-          
+
           {/* Title */}
           <Text style={dynamicStyles.title}>{news.title}</Text>
 
@@ -719,11 +802,107 @@ export default function NewsDetailScreen() {
             <Text style={dynamicStyles.timeAgo}>{getTimeAgo(news.publishedAt)}</Text>
           </View>
 
-          {/* Description */}
-          {news.description && (
-            <Text style={dynamicStyles.description}>{news.description}</Text>
-          )}
 
+          {/* Main Content - Properly rendered HTML */}
+          {formattedContent && (
+            <RenderHTML
+              contentWidth={width - 40}
+              source={{ html: formattedContent }}
+              baseStyle={{
+                fontSize: 16,
+                lineHeight: 26,
+                color: theme.colors.text,
+              }}
+              systemFonts={['SF Pro Display', 'SF Pro Text', 'Helvetica Neue']}
+              tagsStyles={{
+                body: {
+                  color: theme.colors.text,
+                  fontSize: 16,
+                  lineHeight: 26,
+                },
+                p: {
+                  marginBottom: 16,
+                  color: theme.colors.text,
+                },
+                a: {
+                  color: theme.colors.primary,
+                  textDecorationLine: 'none',
+                },
+                strong: {
+                  fontWeight: 'bold',
+                  color: theme.colors.text,
+                },
+                b: {
+                  fontWeight: 'bold',
+                  color: theme.colors.text,
+                },
+                em: {
+                  fontStyle: 'italic',
+                  color: theme.colors.text,
+                },
+                i: {
+                  fontStyle: 'italic',
+                  color: theme.colors.text,
+                },
+                h1: { color: theme.colors.text, fontSize: 24, marginBottom: 16, fontWeight: 'bold' },
+                h2: { color: theme.colors.text, fontSize: 22, marginBottom: 14, fontWeight: 'bold' },
+                h3: { color: theme.colors.text, fontSize: 20, marginBottom: 12, fontWeight: 'bold' },
+                h4: { color: theme.colors.text, fontSize: 18, marginBottom: 10, fontWeight: 'bold' },
+                h5: { color: theme.colors.text, fontSize: 16, marginBottom: 8, fontWeight: 'bold' },
+                h6: { color: theme.colors.text, fontSize: 14, marginBottom: 6, fontWeight: 'bold' },
+                ul: { marginBottom: 16 },
+                ol: { marginBottom: 16 },
+                li: { marginBottom: 8, color: theme.colors.text },
+                blockquote: {
+                  backgroundColor: theme.colors.surface,
+                  borderLeftColor: theme.colors.primary,
+                  borderLeftWidth: 4,
+                  paddingLeft: 16,
+                  paddingVertical: 12,
+                  marginVertical: 16,
+                  fontStyle: 'italic',
+                },
+                code: {
+                  backgroundColor: theme.colors.surface,
+                  padding: 4,
+                  borderRadius: 4,
+                  fontFamily: 'Courier New',
+                },
+                pre: {
+                  backgroundColor: theme.colors.surface,
+                  padding: 16,
+                  borderRadius: 8,
+                  marginVertical: 16,
+                },
+                figure: {
+                  marginVertical: 16,
+                },
+                figcaption: {
+                  fontSize: 14,
+                  color: theme.colors.textSecondary,
+                  textAlign: 'center',
+                  marginTop: 8,
+                  fontStyle: 'italic',
+                },
+                img: {
+                  marginVertical: 16,
+                },
+                span: {
+                  color: theme.colors.text,
+                },
+              }}
+              ignoredDomTags={['script', 'iframe', 'embed', 'object', 'video']}
+              enableExperimentalMarginCollapsing={true}
+              renderersProps={{
+                a: {
+                  onPress: () => { }, // Disable link clicks for security
+                },
+                img: {
+                  enableExperimentalPercentWidth: true,
+                },
+              }}
+            />
+          )}
           {/* Read Full Article Button */}
           {news.url && (
             <TouchableOpacity style={dynamicStyles.readMoreButton} onPress={handleReadFullArticle}>
