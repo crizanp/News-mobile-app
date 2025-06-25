@@ -1,9 +1,10 @@
 // components/NewsList.tsx
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { NewsItem } from '../../types';
+import ArticleAdComponent from '../ads/ArticleAdComponent';
 import MarketNewsItem from './MarketNewsItem';
 
 interface NewsListProps {
@@ -11,16 +12,61 @@ interface NewsListProps {
     title?: string;
 }
 
+interface ListItem {
+    type: 'news' | 'ad';
+    data?: NewsItem;
+    index?: number;
+    id: string;
+}
+
 const NewsList: React.FC<NewsListProps> = ({ news, title = 'Latest Updates' }) => {
     const { theme } = useTheme();
     
-    const renderVerticalNewsItem = useCallback(({ item, index }: { item: NewsItem; index: number }) => (
-        <MarketNewsItem item={item} isHorizontal={false} index={index} />
-    ), []);
+    // Create a combined list of news items and ads
+    const listData = useMemo(() => {
+        const combinedList: ListItem[] = [];
+        
+        news.forEach((newsItem, index) => {
+            // Add news item
+            combinedList.push({
+                type: 'news',
+                data: newsItem,
+                index,
+                id: newsItem.id ? newsItem.id.toString() : `news-${index}`
+            });
+            
+            // Add ad after every 3 news items for better user experience
+            if ((index + 1) % 3 === 0 && index < news.length - 1) {
+                combinedList.push({
+                    type: 'ad',
+                    id: `ad-${Math.floor(index / 3)}`
+                });
+            }
+        });
+        
+        return combinedList;
+    }, [news]);
     
-    const keyExtractor = useCallback((item: NewsItem, index: number) => {
-        return item.id ? item.id.toString() : `${item.url || item.title}-${index}`;
+    const renderItem = useCallback(({ item }: { item: ListItem }) => {
+        if (item.type === 'ad') {
+            return (
+                <ArticleAdComponent 
+                    placement="related"
+                    style={styles.adWrapper}
+                />
+            );
+        }
+        
+        return (
+            <MarketNewsItem 
+                item={item.data!} 
+                isHorizontal={false} 
+                index={item.index!} 
+            />
+        );
     }, []);
+    
+    const keyExtractor = useCallback((item: ListItem) => item.id, []);
     
     // Dynamic styles based on theme
     const containerStyle = [
@@ -46,17 +92,18 @@ const NewsList: React.FC<NewsListProps> = ({ news, title = 'Latest Updates' }) =
     const emptyIconColor = theme.isDark ? '#555' : '#ccc';
     
     return (
-        <View >
+        <View style={containerStyle}>
             <View style={styles.sectionHeader}>
                 <Text style={sectionTitleStyle}>{title}</Text>
                 <Text style={newsCountStyle}>
                     {news.length} article{news.length !== 1 ? 's' : ''}
                 </Text>
             </View>
+            
             {news.length > 0 ? (
                 <FlatList
-                    data={news}
-                    renderItem={renderVerticalNewsItem}
+                    data={listData}
+                    renderItem={renderItem}
                     keyExtractor={keyExtractor}
                     showsVerticalScrollIndicator={false}
                     scrollEnabled={false}
@@ -102,6 +149,9 @@ const styles = StyleSheet.create({
     newsCount: {
         fontSize: 14,
         fontWeight: '500',
+    },
+    adWrapper: {
+        marginVertical: 10,
     },
     emptyResultsContainer: {
         alignItems: 'center',

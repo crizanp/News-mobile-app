@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import RenderHTML from 'react-native-render-html';
 import { WebView } from 'react-native-webview';
+import ArticleAdComponent from '../../components/ads/ArticleAdComponent';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSaveArticle } from '../../hooks/useSaveArticle';
@@ -782,6 +783,9 @@ export default function NewsDetailScreen() {
           />
         )}
 
+        {/* Header Ad - Appears right after image */}
+        <ArticleAdComponent placement="header" />
+
         {/* Article Content */}
         <View style={dynamicStyles.articleContent}>
 
@@ -802,107 +806,112 @@ export default function NewsDetailScreen() {
             <Text style={dynamicStyles.timeAgo}>{getTimeAgo(news.publishedAt)}</Text>
           </View>
 
-
-          {/* Main Content - Properly rendered HTML */}
+          {/* Main Content - First part */}
           {formattedContent && (
-            <RenderHTML
-              contentWidth={width - 40}
-              source={{ html: formattedContent }}
-              baseStyle={{
-                fontSize: 16,
-                lineHeight: 26,
-                color: theme.colors.text,
-              }}
-              systemFonts={['SF Pro Display', 'SF Pro Text', 'Helvetica Neue']}
-              tagsStyles={{
-                body: {
-                  color: theme.colors.text,
+            <View>
+              <RenderHTML
+                contentWidth={width - 40}
+                source={{ html: formattedContent }}
+                baseStyle={{
                   fontSize: 16,
                   lineHeight: 26,
-                },
-                p: {
-                  marginBottom: 16,
                   color: theme.colors.text,
-                },
-                a: {
-                  color: theme.colors.primary,
-                  textDecorationLine: 'none',
-                },
-                strong: {
-                  fontWeight: 'bold',
-                  color: theme.colors.text,
-                },
-                b: {
-                  fontWeight: 'bold',
-                  color: theme.colors.text,
-                },
-                em: {
-                  fontStyle: 'italic',
-                  color: theme.colors.text,
-                },
-                i: {
-                  fontStyle: 'italic',
-                  color: theme.colors.text,
-                },
-                h1: { color: theme.colors.text, fontSize: 24, marginBottom: 16, fontWeight: 'bold' },
-                h2: { color: theme.colors.text, fontSize: 22, marginBottom: 14, fontWeight: 'bold' },
-                h3: { color: theme.colors.text, fontSize: 20, marginBottom: 12, fontWeight: 'bold' },
-                h4: { color: theme.colors.text, fontSize: 18, marginBottom: 10, fontWeight: 'bold' },
-                h5: { color: theme.colors.text, fontSize: 16, marginBottom: 8, fontWeight: 'bold' },
-                h6: { color: theme.colors.text, fontSize: 14, marginBottom: 6, fontWeight: 'bold' },
-                ul: { marginBottom: 16 },
-                ol: { marginBottom: 16 },
-                li: { marginBottom: 8, color: theme.colors.text },
-                blockquote: {
-                  backgroundColor: theme.colors.surface,
-                  borderLeftColor: theme.colors.primary,
-                  borderLeftWidth: 4,
-                  paddingLeft: 16,
-                  paddingVertical: 12,
-                  marginVertical: 16,
-                  fontStyle: 'italic',
-                },
-                code: {
-                  backgroundColor: theme.colors.surface,
-                  padding: 4,
-                  borderRadius: 4,
-                  fontFamily: 'Courier New',
-                },
-                pre: {
-                  backgroundColor: theme.colors.surface,
-                  padding: 16,
-                  borderRadius: 8,
-                  marginVertical: 16,
-                },
-                figure: {
-                  marginVertical: 16,
-                },
-                figcaption: {
-                  fontSize: 14,
-                  color: theme.colors.textSecondary,
-                  textAlign: 'center',
-                  marginTop: 8,
-                  fontStyle: 'italic',
-                },
-                img: {
-                  marginVertical: 16,
-                },
-                span: {
-                  color: theme.colors.text,
-                },
-              }}
-              ignoredDomTags={['script', 'iframe', 'embed', 'object', 'video']}
-              enableExperimentalMarginCollapsing={true}
-              renderersProps={{
-                a: {
-                  onPress: () => { }, // Disable link clicks for security
-                },
-                img: {
-                  enableExperimentalPercentWidth: true,
-                },
-              }}
-            />
+                }}
+                systemFonts={['SF Pro Display', 'SF Pro Text', 'Helvetica Neue']}
+                tagsStyles={{
+                  body: {
+                    color: theme.colors.text,
+                    fontSize: 16,
+                    lineHeight: 26,
+                  },
+                  p: {
+                    marginBottom: 16,
+                    color: theme.colors.text,
+                  },
+                  a: {
+                    color: theme.colors.primary,
+                    textDecorationLine: 'none',
+                  },
+                  strong: {
+                    fontWeight: 'bold',
+                    color: theme.colors.text,
+                  },
+                  b: {
+                    fontWeight: 'bold',
+                    color: theme.colors.text,
+                  },
+                  em: {
+                    fontStyle: 'italic',
+                    color: theme.colors.text,
+                  },
+                  i: {
+                    fontStyle: 'italic',
+                    color: theme.colors.text,
+                  },
+                  h1: { color: theme.colors.text, fontSize: 24, marginBottom: 16, fontWeight: 'bold' },
+                  h2: { color: theme.colors.text, fontSize: 22, marginBottom: 14, fontWeight: 'bold' },
+                  h3: { color: theme.colors.text, fontSize: 20, marginBottom: 12, fontWeight: 'bold' },
+                  h4: { color: theme.colors.text, fontSize: 18, marginBottom: 10, fontWeight: 'bold' },
+                  h5: { color: theme.colors.text, fontSize: 16, marginBottom: 8, fontWeight: 'bold' },
+                  h6: { color: theme.colors.text, fontSize: 14, marginBottom: 6, fontWeight: 'bold' },
+                  ul: { marginBottom: 16 },
+                  ol: { marginBottom: 16 },
+                  li: { marginBottom: 8, color: theme.colors.text },
+                  blockquote: {
+                    backgroundColor: theme.colors.surface,
+                    borderLeftColor: theme.colors.primary,
+                    borderLeftWidth: 4,
+                    paddingLeft: 16,
+                    paddingVertical: 12,
+                    marginVertical: 16,
+                    fontStyle: 'italic',
+                  },
+                  code: {
+                    backgroundColor: theme.colors.surface,
+                    padding: 4,
+                    borderRadius: 4,
+                    fontFamily: 'Courier New',
+                  },
+                  pre: {
+                    backgroundColor: theme.colors.surface,
+                    padding: 16,
+                    borderRadius: 8,
+                    marginVertical: 16,
+                  },
+                  figure: {
+                    marginVertical: 16,
+                  },
+                  figcaption: {
+                    fontSize: 14,
+                    color: theme.colors.textSecondary,
+                    textAlign: 'center',
+                    marginTop: 8,
+                    fontStyle: 'italic',
+                  },
+                  img: {
+                    marginVertical: 16,
+                  },
+                  span: {
+                    color: theme.colors.text,
+                  },
+                }}
+                ignoredDomTags={['script', 'iframe', 'embed', 'object', 'video']}
+                enableExperimentalMarginCollapsing={true}
+                renderersProps={{
+                  a: {
+                    onPress: () => { }, // Disable link clicks for security
+                  },
+                  img: {
+                    enableExperimentalPercentWidth: true,
+                  },
+                }}
+              />
+            </View>
           )}
+
+          {/* Content Ad - In the middle of article */}
+          <ArticleAdComponent placement="content" />
+
           {/* Read Full Article Button */}
           {news.url && (
             <TouchableOpacity style={dynamicStyles.readMoreButton} onPress={handleReadFullArticle}>
@@ -911,10 +920,17 @@ export default function NewsDetailScreen() {
             </TouchableOpacity>
           )}
 
+          {/* Footer Ad - Before related articles */}
+          <ArticleAdComponent placement="footer" />
+
           {/* Related News - Only show if not from saved articles or if there are related articles */}
           {relatedNews.length > 0 && (
             <View style={dynamicStyles.relatedSection}>
               <Text style={dynamicStyles.relatedTitle}>Related News</Text>
+
+              {/* Related articles ad */}
+              {/* <ArticleAdComponent placement="related" /> */}
+
               {relatedNews.map((item, index) => (
                 <TouchableOpacity
                   key={item.id || index}
@@ -945,6 +961,7 @@ export default function NewsDetailScreen() {
         </View>
       </ScrollView>
     </View>
+
   );
 }
 

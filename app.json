@@ -55,6 +55,19 @@
             "backgroundColor": "#0f0f23"
           }
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-5565400586025993~4243996135",
+          "iosAppId": "ca-app-pub-5565400586025993~1534341812"
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "This app uses your activity to provide personalized ad experiences. Your privacy is important to us."
+        }
       ]
     ],
     "experiments": {

@@ -1,24 +1,27 @@
-// MarketScreen.tsx - Updated with Theme Support
+// MarketScreen.tsx - Updated with Interstitial Ads for Force Reload
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import Constants from 'expo-constants';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     Animated,
     FlatList,
+    Platform,
     RefreshControl,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { AdEventType, InterstitialAd, TestIds } from 'react-native-google-mobile-ads';
 import CategoryFilter, { MarketCategory } from '../../components/news/CategoryFilter';
 import EmptyState from '../../components/news/EmptyState';
 import LoadingState from '../../components/news/LoadingState';
 import MarketHighlights from '../../components/news/MarketHighlights';
 import NewsList from '../../components/news/NewsList';
-import { useTheme } from '../../contexts/ThemeContext'; // Add this import
+import { useTheme } from '../../contexts/ThemeContext';
 import { rssNewsService } from '../../services/rssNewsService';
 import { NewsItem } from '../../types';
 
@@ -38,8 +41,22 @@ const marketCategories: MarketCategory[] = [
 const RELOAD_COOLDOWN_KEY = 'market_screen_reload_cooldown';
 const COOLDOWN_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
+// Interstitial Ad Configuration
+const getInterstitialAdUnitId = () => {
+    const isDev = __DEV__ || Constants.expoConfig?.extra?.environment === 'development';
+    
+    if (isDev) {
+        return TestIds.INTERSTITIAL;
+    }
+    
+    // Production ad unit IDs for interstitial ads
+    return Platform.OS === 'android' 
+        ? 'ca-app-pub-5565400586025993/1234567890' // Replace with your Android interstitial ad unit ID
+        : 'ca-app-pub-5565400586025993/0987654321'; // Replace with your iOS interstitial ad unit ID
+};
+
 export default function MarketScreen() {
-    const { theme, isDark } = useTheme(); // Add theme context
+    const { theme, isDark } = useTheme();
     
     const [allNews, setAllNews] = useState<NewsItem[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
@@ -53,11 +70,100 @@ export default function MarketScreen() {
     const [cooldownEndTime, setCooldownEndTime] = useState<number>(0);
     const [remainingTime, setRemainingTime] = useState<number>(0);
     
+    // Ad states
+    const [interstitialLoaded, setInterstitialLoaded] = useState<boolean>(false);
+    const [isLoadingAd, setIsLoadingAd] = useState<boolean>(false);
+    
     const hasInitialData = useRef<boolean>(false);
     const flatListRef = useRef<FlatList>(null);
     const backToTopOpacity = useRef(new Animated.Value(0)).current;
     const cooldownInterval = useRef<number | null>(null);
     const lastRenderLog = useRef<number>(0);
+    const interstitialRef = useRef<InterstitialAd | null>(null);
+
+    // Initialize Interstitial Ad
+    useEffect(() => {
+        const adUnitId = getInterstitialAdUnitId();
+        const interstitial = InterstitialAd.createForAdRequest(adUnitId, {
+            requestNonPersonalizedAdsOnly: false,
+            keywords: [
+                'crypto', 'cryptocurrency', 'bitcoin', 'ethereum', 
+                'news', 'market', 'finance', 'investing', 'blockchain',
+                'trading', 'altcoin', 'defi', 'nft'
+            ],
+        });
+
+        interstitialRef.current = interstitial;
+
+        const unsubscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+            console.log('🎬 Interstitial ad loaded');
+            setInterstitialLoaded(true);
+            setIsLoadingAd(false);
+        });
+
+        const unsubscribeError = interstitial.addAdEventListener(AdEventType.ERROR, (error) => {
+            console.warn('🎬 Interstitial ad failed to load:', error);
+            setInterstitialLoaded(false);
+            setIsLoadingAd(false);
+        });
+
+        const unsubscribeClosed = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
+            console.log('🎬 Interstitial ad closed');
+            // Reload a new ad for next time
+            loadInterstitialAd();
+        });
+
+        // Load the first ad
+        loadInterstitialAd();
+
+        return () => {
+            unsubscribeLoaded();
+            unsubscribeError();
+            unsubscribeClosed();
+        };
+    }, []);
+
+    // Function to load interstitial ad
+    const loadInterstitialAd = useCallback(() => {
+        if (interstitialRef.current && !isLoadingAd) {
+            console.log('🎬 Loading interstitial ad...');
+            setIsLoadingAd(true);
+            setInterstitialLoaded(false);
+            interstitialRef.current.load();
+        }
+    }, [isLoadingAd]);
+
+    // Function to show interstitial ad
+    const showInterstitialAd = useCallback((): Promise<boolean> => {
+        return new Promise((resolve) => {
+            if (interstitialRef.current && interstitialLoaded) {
+                console.log('🎬 Showing interstitial ad');
+                
+                const unsubscribeClosed = interstitialRef.current.addAdEventListener(
+                    AdEventType.CLOSED, 
+                    () => {
+                        console.log('🎬 Interstitial ad closed by user');
+                        unsubscribeClosed();
+                        resolve(true);
+                    }
+                );
+
+                const unsubscribeError = interstitialRef.current.addAdEventListener(
+                    AdEventType.ERROR, 
+                    (error) => {
+                        console.warn('🎬 Interstitial ad show error:', error);
+                        unsubscribeError();
+                        resolve(false);
+                    }
+                );
+
+                interstitialRef.current.show();
+            } else {
+                console.log('🎬 Interstitial ad not ready, proceeding without ad');
+                resolve(false);
+            }
+        });
+    }, [interstitialLoaded]);
 
     // Create dynamic styles based on current theme
     const dynamicStyles = useMemo(() => StyleSheet.create({
@@ -93,6 +199,9 @@ export default function MarketScreen() {
         },
         disabledRefreshButton: {
             backgroundColor: isDark ? 'rgba(142, 142, 147, 0.2)' : 'rgba(204, 204, 204, 0.1)',
+        },
+        loadingAdRefreshButton: {
+            backgroundColor: isDark ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 193, 7, 0.1)',
         },
         cooldownText: {
             fontSize: 12,
@@ -253,7 +362,7 @@ export default function MarketScreen() {
         fetchMarketNews(false); // Regular refresh
     }, []);
 
-    const handleForceRefresh = useCallback((): void => {
+    const handleForceRefresh = useCallback(async (): Promise<void> => {
         if (isReloadDisabled) {
             Alert.alert(
                 'Reload Cooldown',
@@ -263,11 +372,29 @@ export default function MarketScreen() {
             return;
         }
 
-        console.log('🔄 Force refresh triggered with cooldown');
+        console.log('🔄 Force refresh triggered with ad and cooldown');
+        
+        // Show interstitial ad first
+        const adShown = await showInterstitialAd();
+        
+        if (adShown) {
+            console.log('🎬 Ad shown successfully, proceeding with force refresh');
+        } else {
+            console.log('🎬 Ad not shown, proceeding with force refresh anyway');
+        }
+        
+        // Proceed with force refresh regardless of ad status
         setRefreshing(true);
         startReloadCooldown(); // Start the 5-minute cooldown
         fetchMarketNews(true); // Force refresh
-    }, [isReloadDisabled, remainingTime]);
+        
+        // Load next ad for future use
+        if (!isLoadingAd) {
+            setTimeout(() => {
+                loadInterstitialAd();
+            }, 2000); // Wait 2 seconds before loading next ad
+        }
+    }, [isReloadDisabled, remainingTime, showInterstitialAd, isLoadingAd, loadInterstitialAd]);
 
     const onForceRefresh = useCallback((): void => {
         handleForceRefresh();
@@ -486,6 +613,28 @@ export default function MarketScreen() {
         }
     };
 
+    // Get refresh button style based on state
+    const getRefreshButtonStyle = () => {
+        if (isReloadDisabled) {
+            return dynamicStyles.disabledRefreshButton;
+        } else if (isLoadingAd) {
+            return dynamicStyles.loadingAdRefreshButton;
+        } else {
+            return dynamicStyles.enabledRefreshButton;
+        }
+    };
+
+    // Get refresh button icon color
+    const getRefreshButtonColor = () => {
+        if (isReloadDisabled) {
+            return isDark ? '#8E8E93' : '#CCCCCC';
+        } else if (isLoadingAd) {
+            return isDark ? '#FFC107' : '#FF8F00';
+        } else {
+            return isDark ? '#0A84FF' : '#00C851';
+        }
+    };
+
     // Loading state
     if (loading && !refreshing && !hasInitialData.current) {
         console.log('🔄 Showing loading state');
@@ -536,22 +685,27 @@ export default function MarketScreen() {
                     <TouchableOpacity
                         style={[
                             styles.refreshButton, 
-                            isReloadDisabled ? dynamicStyles.disabledRefreshButton : dynamicStyles.enabledRefreshButton
+                            getRefreshButtonStyle()
                         ]}
                         onPress={onForceRefresh}
                         disabled={refreshing || isReloadDisabled}
                         activeOpacity={isReloadDisabled ? 1 : 0.7}
                     >
                         <Ionicons 
-                            name="refresh-circle-outline" 
+                            name={isLoadingAd ? "play-circle-outline" : "refresh-circle-outline"}
                             size={28} 
-                            color={isReloadDisabled ? (isDark ? '#8E8E93' : '#CCCCCC') : (isDark ? '#0A84FF' : '#00C851')} 
+                            color={getRefreshButtonColor()}
                         />
-                        {isReloadDisabled && remainingTime > 0 && (
+                        {/* {isReloadDisabled && remainingTime > 0 && (
                             <Text style={dynamicStyles.cooldownText}>
                                 {formatRemainingTime(remainingTime)}
                             </Text>
                         )}
+                        {isLoadingAd && (
+                            <Text style={[dynamicStyles.cooldownText, { color: getRefreshButtonColor() }]}>
+                                Ad
+                            </Text>
+                        )} */}
                     </TouchableOpacity>
                 </View>
             </View>
