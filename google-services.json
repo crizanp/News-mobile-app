@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "243226897138",
-    "project_id": "crypto--news-app",
-    "storage_bucket": "crypto--news-app.firebasestorage.app"
+    "project_number": "933385641624",
+    "project_id": "crypto-news-c1f19",
+    "storage_bucket": "crypto-news-c1f19.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:243226897138:android:450d54254d4804c418fe6b",
+        "mobilesdk_app_id": "1:933385641624:android:2ec8b8f0cc531170f33aed",
         "android_client_info": {
-          "package_name": "com.srijanp.CryptoNewsApp"
+          "package_name": "com.cryptonews.aggregrator"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCi5L0VM4OvYeY6G_0KFi9wg2AwRBOCLok"
+          "current_key": "AIzaSyA-BXg4iyjLekNpLa800WMfbAXJjtmKj3k"
         }
       ],
       "services": {

@@ -699,7 +699,7 @@ class RSSNewsService {
 
         // Use placeholder if no image found
         if (!imageUrl) {
-            imageUrl = `https://foxbeep.com/logo.png`;
+            imageUrl = `https://cryptews.com/site/uploads/2023/Oct/09/BY%20IGH%20GROUP.png`;
         }
 
         // Extract categories

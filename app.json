@@ -1,20 +1,17 @@
 {
   "expo": {
-    "name": "CryptoNewsApp",
+    "name": "Crypto News App",
     "slug": "CryptoNewsApp",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "cryptonewsapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "notification": {
-      "vapidPublicKey": "BAEsvaSrsWXeEfd8AsMkOaFiYwARLTWId_c0pS0BF6iFV_uzUdxpzpL9JuO3gVXfINmE-CcLYkHyhmWSVwNbOVI",
-      "serviceWorkerPath": "./expo-service-worker.js"
-    },
+
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.srijanp.CryptoNewsApp",
+      "bundleIdentifier": "com.cryptonews.aggregrator",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -26,7 +23,10 @@
         "backgroundColor": "#1a1a2e"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.srijanp.CryptoNewsApp"
+      "package": "com.cryptonews.aggregrator",
+      "permissions": [
+        "com.google.android.gms.permission.AD_ID"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -35,14 +35,7 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/icon.png",
-          "color": "#007AFF",
-          "defaultChannel": "default"
-        }
-      ],
+      
       [
         "expo-splash-screen",
         {
@@ -60,6 +53,7 @@
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-5565400586025993~4243996135",
+          "android_app_id": "ca-app-pub-5565400586025993~4243996135",
           "iosAppId": "ca-app-pub-5565400586025993~1534341812"
         }
       ],
@@ -68,7 +62,8 @@
         {
           "userTrackingPermission": "This app uses your activity to provide personalized ad experiences. Your privacy is important to us."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
@@ -76,8 +71,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "f06eb63d-4d38-4a2f-89fb-4396428f64a3"
+        "projectId": "91380c87-72d8-43a0-abb6-e650a55da057"
       }
-    }
+    },
+    "owner": "ercizanp"
   }
 }

@@ -1,4 +1,4 @@
-// app/(tabs)/settings.tsx - Enhanced Settings Page with Theme Support
+// app/(tabs)/settings.tsx - Enhanced Settings Page with Theme Support and Proper Navigation
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -65,42 +65,19 @@ export default function SettingsScreen() {
 
   const handleActionPress = (settingId: string, title: string) => {
     switch (settingId) {
-      case 'about':
-        Alert.alert(
-          'About App',
-          'MyApp v1.0.0\n\nA comprehensive financial management app designed to help you track expenses, manage budgets, and achieve your financial goals.\n\nDeveloped with ❤️ by Our Team\n\n© 2024 MyApp. All rights reserved.',
-          [{ text: 'OK' }]
-        );
+      case 'help':
+        // Navigate to Help Center page
+        router.push('/help-center');
         break;
       
-      case 'privacyPolicy':
-        Alert.alert(
-          'Privacy Policy',
-          'Your privacy is important to us. We collect and use your information to provide better services while ensuring your data remains secure.\n\nFor detailed information, please visit our website or contact support.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'View Full Policy', onPress: () => openWebLink('https://yourapp.com/privacy') }
-          ]
-        );
+      case 'contact':
+        // Navigate to Contact Support page
+        Linking.openURL('mailto:support@cryptews.com')
         break;
       
-      case 'disclaimer':
-        Alert.alert(
-          'Disclaimer',
-          'This app provides financial tracking tools for informational purposes only. It should not be considered as professional financial advice.\n\nPlease consult with qualified financial advisors for investment decisions.',
-          [{ text: 'Understood' }]
-        );
-        break;
-      
-      case 'advertisement':
-        Alert.alert(
-          'Advertisement Information',
-          'This app may display advertisements to support free usage. We use reputable ad networks and do not share your personal data with advertisers.\n\nYou can upgrade to Premium to remove ads.',
-          [
-            { text: 'OK' },
-            { text: 'Upgrade to Premium', onPress: () => handleUpgrade() }
-          ]
-        );
+      case 'feedback':
+        // Navigate to Send Feedback page
+        router.push('/send-feedback');
         break;
       
       case 'rateApp':
@@ -114,16 +91,24 @@ export default function SettingsScreen() {
         );
         break;
       
-      case 'feedback':
-        Alert.alert(
-          'Send Feedback',
-          'We value your feedback! How would you like to share your thoughts?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Email Us', onPress: () => openEmail() },
-            { text: 'In-App Form', onPress: () => openFeedbackForm() }
-          ]
-        );
+      case 'about':
+                router.push('/about');
+
+        break;
+      
+      case 'privacyPolicy':
+                router.push('/privacy-policy');
+
+        break;
+      
+      case 'disclaimer':
+                router.push('/disclaimer');
+
+        break;
+      
+      case 'advertisement':
+                router.push('/advertisement');
+
         break;
       
       default:
@@ -139,28 +124,22 @@ export default function SettingsScreen() {
   };
 
   const openAppStore = () => {
-    const appStoreUrl = 'https://apps.apple.com/app/your-app-id';
-    const playStoreUrl = 'https://play.google.com/store/apps/details?id=your.package.name';
+    // iOS App Store URL
+    const iosAppStoreUrl = 'https://apps.apple.com/app/id1234567890'; // Replace with your actual app ID
+    // Android Play Store URL
+    const androidPlayStoreUrl = 'https://play.google.com/store/apps/details?id=com.crypto.news'; // Replace with your actual package name
     
-    Linking.openURL(appStoreUrl).catch(() => {
-      Linking.openURL(playStoreUrl).catch(() => {
-        Alert.alert('Error', 'Unable to open app store');
+    // Try iOS first, then Android as fallback
+    Linking.openURL(iosAppStoreUrl).catch(() => {
+      Linking.openURL(androidPlayStoreUrl).catch(() => {
+        // If both fail, show a generic message
+        Alert.alert(
+          'Rate App',
+          'Please search for "Crypto News" in your device\'s app store to leave a rating.',
+          [{ text: 'OK' }]
+        );
       });
     });
-  };
-
-  const openEmail = () => {
-    const email = 'support@yourapp.com';
-    const subject = 'App Feedback';
-    const body = 'Hi there,\n\nI have some feedback about the app:\n\n';
-    
-    Linking.openURL(`mailto:${email}?subject=${subject}&body=${body}`).catch(() => {
-      Alert.alert('Error', 'Unable to open email client');
-    });
-  };
-
-  const openFeedbackForm = () => {
-    Alert.alert('Feedback Form', 'This would open an in-app feedback form');
   };
 
   const handleUpgrade = () => {
